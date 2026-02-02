@@ -83,6 +83,9 @@ export function Expenses() {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {expense.category_name || '-'}
+                        {expense.sub_category_name && (
+                          <span className="text-gray-400"> / {expense.sub_category_name}</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {expense.account_name || '-'}

@@ -1,4 +1,4 @@
-import { useAccountBalance, useExpenseSummary, useExpenses } from '../hooks';
+import { useAccounts, useAccountBalance, useExpenseSummary, useExpenses } from '../hooks';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui';
 import { formatCurrency, formatDate } from '../utils/format';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -6,11 +6,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export function Dashboard() {
+  const { data: accountsData, isLoading: accountsLoading } = useAccounts();
   const { data: balanceData, isLoading: balanceLoading } = useAccountBalance();
   const { data: summaryData, isLoading: summaryLoading } = useExpenseSummary();
   const { data: expensesData, isLoading: expensesLoading } = useExpenses({ limit: 5 });
 
-  if (balanceLoading || summaryLoading) {
+  if (accountsLoading || balanceLoading || summaryLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500">Loading dashboard...</div>
@@ -31,13 +32,26 @@ export function Dashboard() {
   const summary = summaryData?.summary || { total_count: 0, total_amount: 0 };
   const categoryData = summaryData?.by_category || [];
 
+  const accounts = accountsData?.accounts || [];
+  
+  // Calculate totals
+  const totalCreditLimit = accounts
+    .filter(a => a.type === 'credit_card' && a.details?.credit_limit)
+    .reduce((sum, a) => sum + (a.details?.credit_limit || 0), 0);
+  
+  const totalAvailableCredit = accounts
+    .filter(a => a.type === 'credit_card' && a.details?.credit_limit)
+    .reduce((sum, a) => sum + ((a.details?.credit_limit || 0) - a.balance), 0);
+  
+  const totalLoanBalance = accounts
+    .filter(a => a.type === 'loan' && a.details?.loan_balance)
+    .reduce((sum, a) => sum + (a.details?.loan_balance || 0), 0);
+
   const balanceBreakdown = [
     { name: 'Checking', value: Number(balances.checking) },
     { name: 'Savings', value: Number(balances.savings) },
-    { name: 'Credit Card', value: Number(balances.credit_card) },
     { name: 'Cash', value: Number(balances.cash) },
     { name: 'Investment', value: Number(balances.investment) },
-    { name: 'Loan', value: Number(balances.loan) },
   ].filter((item) => item.value !== 0);
 
   return (
@@ -48,12 +62,36 @@ export function Dashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-gray-500 mb-1">Total Balance</div>
             <div className="text-2xl font-bold text-gray-900">
               {formatCurrency(Number(balances.total_balance))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-500 mb-1">Credit Limit</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {formatCurrency(totalCreditLimit)}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              Available: {formatCurrency(totalAvailableCredit)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-500 mb-1">Loan Balance</div>
+            <div className="text-2xl font-bold text-red-600">
+              {formatCurrency(totalLoanBalance)}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              {accounts.filter(a => a.type === 'loan').length} loans
             </div>
           </CardContent>
         </Card>
@@ -67,16 +105,6 @@ export function Dashboard() {
             <div className="text-sm text-gray-500 mt-1">
               {summary.total_count} transactions
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-gray-500 mb-1">Accounts</div>
-            <div className="text-2xl font-bold text-gray-900">
-              {balanceBreakdown.length}
-            </div>
-            <div className="text-sm text-gray-500 mt-1">Active accounts</div>
           </CardContent>
         </Card>
       </div>

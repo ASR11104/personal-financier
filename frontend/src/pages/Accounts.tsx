@@ -101,10 +101,34 @@ export function Accounts() {
                 </div>
 
                 <div className="mt-4">
-                  <p className="text-sm text-gray-500">Balance</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(account.balance, account.currency)}
-                  </p>
+                  {account.type === 'credit_card' ? (
+                    <>
+                      <p className="text-sm text-gray-500">Credit Limit</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {formatCurrency(account.details?.credit_limit || 0, account.currency)}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Available: {formatCurrency((account.details?.credit_limit || 0) - account.balance, account.currency)}
+                      </p>
+                    </>
+                  ) : account.type === 'loan' ? (
+                    <>
+                      <p className="text-sm text-gray-500">Remaining Balance</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {formatCurrency(account.details?.loan_balance || account.balance, account.currency)}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Original: {formatCurrency(account.details?.loan_amount || 0, account.currency)}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-500">Balance</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {formatCurrency(account.balance, account.currency)}
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {account.institution_name && (

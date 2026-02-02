@@ -10,7 +10,9 @@ import {
   EditExpense,
   Accounts,
   AddAccount,
+  EditAccount,
   Analytics,
+  Categories,
 } from './pages';
 import { getToken } from './api';
 
@@ -55,7 +57,9 @@ function App() {
             <Route path="/expenses/:id/edit" element={<EditExpense />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/accounts/new" element={<AddAccount />} />
+            <Route path="/accounts/:id/edit" element={<EditAccount />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/categories" element={<Categories />} />
           </Route>
 
           {/* Redirect root to dashboard or login */}

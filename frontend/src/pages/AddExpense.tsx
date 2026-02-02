@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useCreateExpense, useAccounts } from '../hooks';
+import { useCreateExpense, useAccounts, useCategories, useSubCategories } from '../hooks';
 import { Button, Card, Input, Select, Alert, AlertDescription } from '../components/ui';
 
 export function AddExpense() {
@@ -17,12 +17,26 @@ export function AddExpense() {
   const [error, setError] = useState('');
 
   const { data: accountsData, isLoading: accountsLoading } = useAccounts();
+  const { data: categoriesData } = useCategories({ type: 'expense' });
+  const { data: subCategoriesData } = useSubCategories(
+    formData.category_id ? { category_id: formData.category_id } : undefined
+  );
   const createExpense = useCreateExpense();
 
   const accounts = accountsData?.accounts || [];
+  const categories = categoriesData?.categories || [];
+  const subCategories = subCategoriesData?.sub_categories || [];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      // Reset subcategory when category changes
+      if (name === 'category_id') {
+        newData.sub_category_id = '';
+      }
+      return newData;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,18 +64,15 @@ export function AddExpense() {
     label: `${acc.name} (${acc.type})`,
   }));
 
-  // Mock categories - in real app, fetch from API
-  const categoryOptions = [
-    { value: '1', label: 'Food & Dining' },
-    { value: '2', label: 'Transportation' },
-    { value: '3', label: 'Shopping' },
-    { value: '4', label: 'Entertainment' },
-    { value: '5', label: 'Bills & Utilities' },
-    { value: '6', label: 'Healthcare' },
-    { value: '7', label: 'Education' },
-    { value: '8', label: 'Travel' },
-    { value: '9', label: 'Other' },
-  ];
+  const categoryOptions = categories.map((cat) => ({
+    value: cat.id,
+    label: cat.name,
+  }));
+
+  const subCategoryOptions = subCategories.map((subCat) => ({
+    value: subCat.id,
+    label: subCat.name,
+  }));
 
   if (accountsLoading) {
     return <div className="text-gray-500">Loading...</div>;
@@ -100,6 +111,15 @@ export function AddExpense() {
             options={categoryOptions}
             placeholder="Select a category"
             required
+          />
+
+          <Select
+            label="SubCategory"
+            name="sub_category_id"
+            value={formData.sub_category_id}
+            onChange={handleChange}
+            options={subCategoryOptions}
+            placeholder="Select a subcategory (optional)"
           />
 
           <Input

@@ -23,6 +23,8 @@ export interface UpdateExpenseParams {
   amount?: number;
   description?: string;
   expense_date?: string;
+  category_id?: string;
+  sub_category_id?: string;
 }
 
 export interface ExpenseListResponse {

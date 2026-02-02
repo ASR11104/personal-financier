@@ -14,6 +14,19 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+export interface AccountDetails {
+  id: string;
+  account_id: string;
+  credit_limit?: number;
+  available_credit?: number;
+  loan_amount?: number;
+  loan_balance?: number;
+  interest_rate?: number;
+  loan_term_months?: number;
+  loan_start_date?: string;
+  loan_due_date?: string;
+}
+
 export interface Account {
   id: string;
   user_id: string;
@@ -25,6 +38,7 @@ export interface Account {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  details?: AccountDetails;
 }
 
 export interface Category {

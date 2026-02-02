@@ -33,6 +33,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'Expenses', href: '/expenses' },
     { name: 'Accounts', href: '/accounts' },
+    { name: 'Categories', href: '/categories' },
     { name: 'Analytics', href: '/analytics' },
   ];
 

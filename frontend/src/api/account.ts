@@ -1,5 +1,16 @@
 import { api } from './client';
-import type { Account, AccountBalance } from '../types';
+import type { Account, AccountBalance, AccountDetails } from '../types';
+
+export interface AccountDetailsParams {
+  credit_limit?: number;
+  available_credit?: number;
+  loan_amount?: number;
+  loan_balance?: number;
+  interest_rate?: number;
+  loan_term_months?: number;
+  loan_start_date?: string;
+  loan_due_date?: string;
+}
 
 export interface CreateAccountParams {
   name: string;
@@ -7,6 +18,7 @@ export interface CreateAccountParams {
   currency: string;
   institution_name?: string;
   balance?: number;
+  details?: AccountDetailsParams;
 }
 
 export interface UpdateAccountParams {
@@ -16,10 +28,15 @@ export interface UpdateAccountParams {
   institution_name?: string;
   is_active?: boolean;
   balance?: number;
+  details?: AccountDetailsParams;
 }
 
 export interface AccountListResponse {
   accounts: Account[];
+}
+
+export interface AccountResponse {
+  account: Account;
 }
 
 export interface AccountBalanceResponse {

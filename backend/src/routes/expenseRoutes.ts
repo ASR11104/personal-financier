@@ -43,6 +43,8 @@ router.put(
     body('amount').optional().isFloat({ min: 0.01 }),
     body('description').optional().trim(),
     body('expense_date').optional().isDate(),
+    body('category_id').optional().isUUID(),
+    body('sub_category_id').optional().isUUID(),
   ],
   expenseController.updateExpense
 );

@@ -1,0 +1,48 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Backend (dev)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "dev"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/backend/dist/**/*.js"
+            ],
+            "sourceMaps": true,
+            "smartStep": true
+        },
+        {
+            "name": "Debug Backend (compiled)",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/dist/index.js",
+            "outFiles": [
+                "${workspaceFolder}/backend/dist/**/*.js"
+            ],
+            "sourceMaps": true,
+            "smartStep": true
+        },
+        {
+            "name": "Attach by Process ID",
+            "processId": "${command:PickProcess}",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node"
+        }
+    ]
+}

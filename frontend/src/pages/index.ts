@@ -6,4 +6,6 @@ export { AddExpense } from './AddExpense';
 export { EditExpense } from './EditExpense';
 export { Accounts } from './Accounts';
 export { AddAccount } from './AddAccount';
+export { EditAccount } from './EditAccount';
 export { Analytics } from './Analytics';
+export { Categories } from './Categories';

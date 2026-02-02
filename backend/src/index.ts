@@ -6,8 +6,7 @@ import { config } from './config';
 import routes from './routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import './database/connection';
-console.log('Database connection established');
-console.log(process.env);
+import { seedDefaultCategories } from './database/seedDefaultCategories';
 
 
 const app = express();
@@ -29,7 +28,8 @@ app.use(errorHandler);
 // Start server
 const PORT = config.port;
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await seedDefaultCategories();
   console.log(`Server running on port ${PORT} in ${config.env} mode`);
 });
 
