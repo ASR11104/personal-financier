@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useCreateExpense, useAccounts, useCategories, useTags } from '../hooks';
+import { useCreateIncome, useAccounts, useCategories, useTags } from '../hooks';
 import { Button, Card, Input, Select, MultiSelect, Alert, AlertDescription } from '../components/ui';
 
-export function AddExpense() {
+export function AddIncome() {
   const navigate = useNavigate();
   const location = useLocation();
   const [formData, setFormData] = useState({
@@ -11,25 +11,19 @@ export function AddExpense() {
     category_id: '',
     amount: '',
     description: '',
-    expense_date: new Date().toISOString().split('T')[0],
+    income_date: new Date().toISOString().split('T')[0],
     tag_ids: [] as string[],
-    credit_card_account_id: '',
-    loan_account_id: '',
   });
   const [error, setError] = useState('');
 
   const { data: accountsData, isLoading: accountsLoading } = useAccounts();
-  const { data: categoriesData } = useCategories({ type: 'expense' });
+  const { data: categoriesData } = useCategories({ type: 'income' });
   const { data: tagsData } = useTags();
-  const createExpense = useCreateExpense();
+  const createIncome = useCreateIncome();
 
   const accounts = accountsData?.accounts || [];
   const categories = categoriesData?.categories || [];
   const tags = tagsData?.tags || [];
-
-  // Filter credit card and loan accounts for bill payments
-  const creditCardAccounts = accounts.filter((acc) => acc.type === 'credit_card');
-  const loanAccounts = accounts.filter((acc) => acc.type === 'loan');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -45,20 +39,18 @@ export function AddExpense() {
     setError('');
 
     try {
-      await createExpense.mutateAsync({
+      await createIncome.mutateAsync({
         account_id: formData.account_id,
         category_id: formData.category_id,
         amount: Number(formData.amount),
         description: formData.description || undefined,
-        expense_date: formData.expense_date,
+        income_date: formData.income_date,
         tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined,
-        credit_card_account_id: formData.credit_card_account_id || undefined,
-        loan_account_id: formData.loan_account_id || undefined,
       });
-      navigate('/expenses');
+      navigate('/incomes');
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || 'Failed to create expense');
+      setError(axiosError.response?.data?.message || 'Failed to create income');
     }
   };
 
@@ -72,30 +64,15 @@ export function AddExpense() {
     label: cat.name,
   }));
 
-  const creditCardOptions = creditCardAccounts.map((acc) => ({
-    value: acc.id,
-    label: acc.name,
-  }));
-
-  const loanOptions = loanAccounts.map((acc) => ({
-    value: acc.id,
-    label: acc.name,
-  }));
-
   if (accountsLoading) {
     return <div className="text-gray-500">Loading...</div>;
   }
 
-  // Check if selected category is Credit Card or Loan to show relevant fields
-  const selectedCategory = categories.find((cat) => cat.id === formData.category_id);
-  const isCreditCardCategory = selectedCategory?.name === 'Credit Card';
-  const isLoanCategory = selectedCategory?.name === 'Loan';
-
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Add Expense</h1>
-        <p className="text-gray-500 mt-1">Record a new expense</p>
+        <h1 className="text-2xl font-bold text-gray-900">Add Income</h1>
+        <p className="text-gray-500 mt-1">Record a new income</p>
       </div>
 
       <Card>
@@ -126,30 +103,6 @@ export function AddExpense() {
             required
           />
 
-          {/* Credit Card Bill Payment - show credit card selection */}
-          {isCreditCardCategory && (
-            <Select
-              label="Credit Card (for bill payment)"
-              name="credit_card_account_id"
-              value={formData.credit_card_account_id}
-              onChange={handleChange}
-              options={creditCardOptions}
-              placeholder="Select credit card"
-            />
-          )}
-
-          {/* Loan Payment - show loan selection */}
-          {isLoanCategory && (
-            <Select
-              label="Loan (for payment)"
-              name="loan_account_id"
-              value={formData.loan_account_id}
-              onChange={handleChange}
-              options={loanOptions}
-              placeholder="Select loan"
-            />
-          )}
-
           {/* Tags Section */}
           <MultiSelect
             label="Tags"
@@ -174,8 +127,8 @@ export function AddExpense() {
           <Input
             label="Date"
             type="date"
-            name="expense_date"
-            value={formData.expense_date}
+            name="income_date"
+            value={formData.income_date}
             onChange={handleChange}
             required
           />
@@ -185,17 +138,17 @@ export function AddExpense() {
             name="description"
             value={formData.description}
             onChange={handleChange}
-            placeholder="What was this expense for?"
+            placeholder="What was this income for?"
           />
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" isLoading={createExpense.isPending}>
-              Save Expense
+            <Button type="submit" isLoading={createIncome.isPending}>
+              Save Income
             </Button>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => navigate('/expenses')}
+              onClick={() => navigate('/incomes')}
             >
               Cancel
             </Button>

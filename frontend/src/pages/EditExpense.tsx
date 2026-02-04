@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useExpense, useUpdateExpense, useCategories, useSubCategories } from '../hooks';
-import { Button, Card, Input, Select, Alert, AlertDescription } from '../components/ui';
+import { useExpense, useUpdateExpense, useCategories, useTags, useAccounts } from '../hooks';
+import { Button, Card, Input, Select, MultiSelect, Alert, AlertDescription } from '../components/ui';
 
 export function EditExpense() {
   const navigate = useNavigate();
@@ -11,19 +11,25 @@ export function EditExpense() {
     description: '',
     expense_date: '',
     category_id: '',
-    sub_category_id: '',
+    tag_ids: [] as string[],
+    credit_card_account_id: '',
+    loan_account_id: '',
   });
   const [error, setError] = useState('');
 
   const { data: expenseData, isLoading } = useExpense(id || '');
   const { data: categoriesData } = useCategories({ type: 'expense' });
-  const { data: subCategoriesData } = useSubCategories(
-    formData.category_id ? { category_id: formData.category_id } : undefined
-  );
+  const { data: tagsData } = useTags();
+  const { data: accountsData } = useAccounts();
   const updateExpense = useUpdateExpense();
 
   const categories = categoriesData?.categories || [];
-  const subCategories = subCategoriesData?.sub_categories || [];
+  const tags = tagsData?.tags || [];
+  const accounts = accountsData?.accounts || [];
+
+  // Filter credit card and loan accounts for bill payments
+  const creditCardAccounts = accounts.filter((acc) => acc.type === 'credit_card');
+  const loanAccounts = accounts.filter((acc) => acc.type === 'loan');
 
   useEffect(() => {
     if (expenseData?.expense) {
@@ -32,21 +38,20 @@ export function EditExpense() {
         description: expenseData.expense.description || '',
         expense_date: expenseData.expense.expense_date.split('T')[0],
         category_id: expenseData.expense.category_id || '',
-        sub_category_id: expenseData.expense.sub_category_id || '',
+        tag_ids: expenseData.expense.tags?.map((t) => t.id) || [],
+        credit_card_account_id: expenseData.expense.credit_card_account_id || '',
+        loan_account_id: expenseData.expense.loan_account_id || '',
       });
     }
   }, [expenseData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => {
-      const newData = { ...prev, [name]: value };
-      // Reset subcategory when category changes
-      if (name === 'category_id') {
-        newData.sub_category_id = '';
-      }
-      return newData;
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleTagToggle = (tagIds: string[]) => {
+    setFormData((prev) => ({ ...prev, tag_ids: tagIds }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,7 +68,9 @@ export function EditExpense() {
           description: formData.description || undefined,
           expense_date: formData.expense_date,
           category_id: formData.category_id || undefined,
-          sub_category_id: formData.sub_category_id || undefined,
+          tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : [],
+          credit_card_account_id: formData.credit_card_account_id || undefined,
+          loan_account_id: formData.loan_account_id || undefined,
         },
       });
       navigate('/expenses');
@@ -78,9 +85,14 @@ export function EditExpense() {
     label: cat.name,
   }));
 
-  const subCategoryOptions = subCategories.map((subCat) => ({
-    value: subCat.id,
-    label: subCat.name,
+  const creditCardOptions = creditCardAccounts.map((acc) => ({
+    value: acc.id,
+    label: acc.name,
+  }));
+
+  const loanOptions = loanAccounts.map((acc) => ({
+    value: acc.id,
+    label: acc.name,
   }));
 
   if (isLoading) {
@@ -90,6 +102,11 @@ export function EditExpense() {
   if (!expenseData?.expense) {
     return <div className="text-gray-500">Expense not found</div>;
   }
+
+  // Check if selected category is Credit Card or Loan to show relevant fields
+  const selectedCategory = categories.find((cat) => cat.id === formData.category_id);
+  const isCreditCardCategory = selectedCategory?.name === 'Credit Card';
+  const isLoanCategory = selectedCategory?.name === 'Loan';
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -119,13 +136,37 @@ export function EditExpense() {
             placeholder="Select a category"
           />
 
-          <Select
-            label="SubCategory"
-            name="sub_category_id"
-            value={formData.sub_category_id}
-            onChange={handleChange}
-            options={subCategoryOptions}
-            placeholder="Select a subcategory (optional)"
+          {/* Credit Card Bill Payment - show credit card selection */}
+          {isCreditCardCategory && (
+            <Select
+              label="Credit Card (for bill payment)"
+              name="credit_card_account_id"
+              value={formData.credit_card_account_id}
+              onChange={handleChange}
+              options={creditCardOptions}
+              placeholder="Select credit card"
+            />
+          )}
+
+          {/* Loan Payment - show loan selection */}
+          {isLoanCategory && (
+            <Select
+              label="Loan (for payment)"
+              name="loan_account_id"
+              value={formData.loan_account_id}
+              onChange={handleChange}
+              options={loanOptions}
+              placeholder="Select loan"
+            />
+          )}
+
+          {/* Tags Section */}
+          <MultiSelect
+            label="Tags"
+            options={tags}
+            value={formData.tag_ids}
+            onChange={handleTagToggle}
+            placeholder="Select tags"
           />
 
           <Input

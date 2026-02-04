@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../database/connection';
 import { AppError } from '../middleware/errorHandler';
+import { SYSTEM_USER_ID } from '../constants';
 
 const handleError = (next: NextFunction, error: unknown): void => {
   if (error instanceof AppError) {
@@ -20,7 +21,7 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
     let query = db('categories')
       .select('*')
       .where(function() {
-        this.where('user_id', userId).orWhereNull('user_id');
+        this.where('user_id', userId).orWhere('user_id', SYSTEM_USER_ID);
       });
 
     if (type) {
@@ -41,11 +42,17 @@ export const getCategoryById = async (req: Request, res: Response, next: NextFun
     const userId = authReq.user?.id;
     const { id } = req.params;
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new AppError('Category not found', 404);
+    }
+
     const category = await db('categories')
       .select('*')
       .where('id', id)
       .where(function() {
-        this.where('user_id', userId).orWhereNull('user_id');
+        this.where('user_id', userId).orWhere('user_id', SYSTEM_USER_ID);
       })
       .first();
 
@@ -133,148 +140,132 @@ export const deleteCategory = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-// SubCategories
-export const getSubCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// Tags (replaces SubCategories)
+export const getTags = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    console.log("getSubCategories>>>")
     const authReq = req as any;
     const userId = authReq.user?.id;
-    const { category_id } = req.query;
+    const { search } = req.query;
 
-    let query = db('sub_categories')
-      .select('sub_categories.*', 'categories.name as category_name', 'categories.type as category_type')
-      .join('categories', 'sub_categories.category_id', 'categories.id')
+    let query = db('tags')
+      .select('*')
       .where(function() {
-        this.where('categories.user_id', userId).orWhereNull('categories.user_id');
+        this.where('user_id', userId).orWhere('user_id', SYSTEM_USER_ID);
       });
 
-    if (category_id) {
-      query = query.where('sub_categories.category_id', category_id);
+    if (search) {
+      query = query.where('name', 'ilike', `%${search}%`);
     }
 
-    const subCategories = await query.orderBy('sub_categories.name', 'asc');
+    const tags = await query.orderBy('name', 'asc');
 
-    res.json({ sub_categories: subCategories });
+    res.json({ tags });
   } catch (error) {
-    console.log("error")
-    console.log(error)
     handleError(next, error);
   }
 };
 
-export const getSubCategoryById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getTagById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authReq = req as any;
     const userId = authReq.user?.id;
     const { id } = req.params;
 
-    const subCategory = await db('sub_categories')
-      .select('sub_categories.*', 'categories.name as category_name', 'categories.type as category_type')
-      .join('categories', 'sub_categories.category_id', 'categories.id')
-      .where('sub_categories.id', id)
+    const tag = await db('tags')
+      .where('id', id)
       .where(function() {
-        this.where('categories.user_id', userId).orWhereNull('categories.user_id');
+        this.where('user_id', userId).orWhere('user_id', SYSTEM_USER_ID);
       })
       .first();
 
-    if (!subCategory) {
-      throw new AppError('SubCategory not found', 404);
+    if (!tag) {
+      throw new AppError('Tag not found', 404);
     }
 
-    res.json({ sub_category: subCategory });
+    res.json({ tag });
   } catch (error) {
     handleError(next, error);
   }
 };
 
-export const createSubCategory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const createTag = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authReq = req as any;
     const userId = authReq.user?.id;
-    const { category_id, name, description } = req.body;
+    const { name, color } = req.body;
 
-    // Verify category exists and belongs to user
-    const category = await db('categories')
-      .where('id', category_id)
-      .where(function() {
-        this.where('user_id', userId).orWhereNull('user_id');
-      })
-      .first();
-
-    if (!category) {
-      throw new AppError('Category not found', 404);
-    }
-
-    const [subCategory] = await db('sub_categories')
+    const [tag] = await db('tags')
       .insert({
-        category_id,
+        user_id: userId,
         name,
-        description,
+        color: color || '#3B82F6',
       })
       .returning('*');
 
-    res.status(201).json({ sub_category: subCategory });
-  } catch (error) {
-    handleError(next, error);
+    res.status(201).json({ tag });
+  } catch (error: any) {
+    // Handle unique constraint violation
+    if (error?.code === '23505') {
+      next(new AppError('Tag with this name already exists', 400));
+    } else {
+      handleError(next, error);
+    }
   }
 };
 
-export const updateSubCategory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const updateTag = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authReq = req as any;
     const userId = authReq.user?.id;
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, color } = req.body;
 
-    const subCategory = await db('sub_categories')
-      .join('categories', 'sub_categories.category_id', 'categories.id')
-      .where('sub_categories.id', id)
-      .where(function() {
-        this.where('categories.user_id', userId).orWhereNull('categories.user_id');
-      })
-      .select('sub_categories.*')
+    const tag = await db('tags')
+      .where('id', id)
+      .where('user_id', userId)
       .first();
 
-    if (!subCategory) {
-      throw new AppError('SubCategory not found', 404);
+    if (!tag) {
+      throw new AppError('Tag not found', 404);
     }
 
-    const [updatedSubCategory] = await db('sub_categories')
+    const [updatedTag] = await db('tags')
       .where('id', id)
       .update({
-        name: name || subCategory.name,
-        description: description !== undefined ? description : subCategory.description,
+        name: name || tag.name,
+        color: color || tag.color,
       })
       .returning('*');
 
-    res.json({ sub_category: updatedSubCategory });
-  } catch (error) {
-    handleError(next, error);
+    res.json({ tag: updatedTag });
+  } catch (error: any) {
+    // Handle unique constraint violation
+    if (error?.code === '23505') {
+      next(new AppError('Tag with this name already exists', 400));
+    } else {
+      handleError(next, error);
+    }
   }
 };
 
-export const deleteSubCategory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const deleteTag = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authReq = req as any;
     const userId = authReq.user?.id;
     const { id } = req.params;
 
-    const subCategory = await db('sub_categories')
-      .join('categories', 'sub_categories.category_id', 'categories.id')
-      .where('sub_categories.id', id)
-      .where(function() {
-        this.where('categories.user_id', userId).orWhereNull('categories.user_id');
-      })
-      .select('sub_categories.*')
+    const tag = await db('tags')
+      .where('id', id)
+      .where('user_id', userId)
       .first();
 
-    if (!subCategory) {
-      throw new AppError('SubCategory not found', 404);
+    if (!tag) {
+      throw new AppError('Tag not found', 404);
     }
 
-    await db('sub_categories').where('id', id).del();
+    await db('tags').where('id', id).del();
 
-    res.json({ message: 'SubCategory deleted successfully' });
+    res.json({ message: 'Tag deleted successfully' });
   } catch (error) {
     handleError(next, error);
   }

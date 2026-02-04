@@ -7,6 +7,37 @@ const router = Router();
 
 router.use(authenticate);
 
+// Tags routes (replaces SubCategories)
+router.get(
+  '/tags',
+  [
+    query('search').optional().trim(),
+  ],
+  categoryController.getTags
+);
+
+router.get('/tags/:id', categoryController.getTagById);
+
+router.post(
+  '/tags',
+  [
+    body('name').trim().isLength({ min: 1, max: 100 }),
+    body('color').optional().trim().matches(/^#[0-9A-Fa-f]{6}$/),
+  ],
+  categoryController.createTag
+);
+
+router.put(
+  '/tags/:id',
+  [
+    body('name').optional().trim().isLength({ min: 1, max: 100 }),
+    body('color').optional().trim().matches(/^#[0-9A-Fa-f]{6}$/),
+  ],
+  categoryController.updateTag
+);
+
+router.delete('/tags/:id', categoryController.deleteTag);
+
 // Categories routes
 router.get(
   '/',
@@ -38,37 +69,5 @@ router.put(
 );
 
 router.delete('/:id', categoryController.deleteCategory);
-
-// SubCategories routes
-router.get(
-  '/sub-categories',
-  [
-    query('category_id').optional().isUUID(),
-  ],
-  categoryController.getSubCategories
-);
-
-router.get('/sub-categories/:id', categoryController.getSubCategoryById);
-
-router.post(
-  '/sub-categories',
-  [
-    body('category_id').isUUID(),
-    body('name').trim().isLength({ min: 1, max: 100 }),
-    body('description').optional().trim().isLength({ max: 256 }),
-  ],
-  categoryController.createSubCategory
-);
-
-router.put(
-  '/sub-categories/:id',
-  [
-    body('name').optional().trim().isLength({ min: 1, max: 100 }),
-    body('description').optional().trim().isLength({ max: 256 }),
-  ],
-  categoryController.updateSubCategory
-);
-
-router.delete('/sub-categories/:id', categoryController.deleteSubCategory);
 
 export default router;

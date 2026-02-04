@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { body, query } from 'express-validator';
-import * as expenseController from '../controllers/expenseController';
+import * as incomeController from '../controllers/incomeController';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -18,12 +18,12 @@ router.get(
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('offset').optional().isInt({ min: 0 }),
   ],
-  expenseController.getExpenses
+  incomeController.getIncomes
 );
 
-router.get('/summary', expenseController.getExpenseSummary);
+router.get('/summary', incomeController.getIncomeSummary);
 
-router.get('/:id', expenseController.getExpenseById);
+router.get('/:id', incomeController.getIncomeById);
 
 router.post(
   '/',
@@ -32,13 +32,11 @@ router.post(
     body('category_id').isUUID(),
     body('amount').isFloat({ min: 0.01 }),
     body('description').optional().trim(),
-    body('expense_date').isDate(),
+    body('income_date').isDate(),
     body('tag_ids').optional().isArray(),
     body('tag_ids.*').optional().isUUID(),
-    body('credit_card_account_id').optional().isUUID(),
-    body('loan_account_id').optional().isUUID(),
   ],
-  expenseController.createExpense
+  incomeController.createIncome
 );
 
 router.put(
@@ -46,16 +44,14 @@ router.put(
   [
     body('amount').optional().isFloat({ min: 0.01 }),
     body('description').optional().trim(),
-    body('expense_date').optional().isDate(),
+    body('income_date').optional().isDate(),
     body('category_id').optional().isUUID(),
     body('tag_ids').optional().isArray(),
     body('tag_ids.*').optional().isUUID(),
-    body('credit_card_account_id').optional().isUUID(),
-    body('loan_account_id').optional().isUUID(),
   ],
-  expenseController.updateExpense
+  incomeController.updateIncome
 );
 
-router.delete('/:id', expenseController.deleteExpense);
+router.delete('/:id', incomeController.deleteIncome);
 
 export default router;

@@ -37,10 +37,17 @@ router.put(
     body('institution_name').optional().trim().isLength({ max: 100 }),
     body('balance').optional().isFloat({ min: 0 }),
     body('is_active').optional().isBoolean(),
+    body('details.credit_limit').optional().isFloat({ min: 0 }),
+    body('details.available_credit').optional().isFloat({ min: 0 }),
+    body('details.loan_amount').optional().isFloat({ min: 0 }),
+    body('details.loan_balance').optional().isFloat({ min: 0 }),
+    body('details.interest_rate').optional().isFloat({ min: 0 }),
   ],
   accountController.updateAccount
 );
 
 router.delete('/:id', accountController.deleteAccount);
+
+router.post('/:id/reactivate', accountController.reactivateAccount);
 
 export default router;

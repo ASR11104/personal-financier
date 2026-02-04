@@ -15,7 +15,21 @@ const handleError = (next: NextFunction, error: unknown): void => {
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password, first_name, last_name } = req.body;
+    const { 
+      email, 
+      password, 
+      first_name, 
+      last_name, 
+      default_currency,
+      date_of_birth,
+      age,
+      gender,
+      marital_status,
+      number_of_dependants,
+      country,
+      state,
+      district
+    } = req.body;
 
     const existingUser = await db('users')
       .whereRaw('LOWER(email) = LOWER(?)', [email])
@@ -33,6 +47,16 @@ export const register = async (req: Request, res: Response, next: NextFunction):
         password_hash: passwordHash,
         first_name,
         last_name,
+        default_currency: default_currency || 'USD',
+        timezone: 'UTC',
+        date_of_birth,
+        age,
+        gender,
+        marital_status,
+        number_of_dependants,
+        country,
+        state,
+        district,
       })
       .returning('*');
 
@@ -54,6 +78,15 @@ export const register = async (req: Request, res: Response, next: NextFunction):
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
+        default_currency: user.default_currency,
+        date_of_birth: user.date_of_birth,
+        age: user.age,
+        gender: user.gender,
+        marital_status: user.marital_status,
+        number_of_dependants: user.number_of_dependants,
+        country: user.country,
+        state: user.state,
+        district: user.district,
       },
       token,
       refreshToken,
@@ -99,6 +132,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
+        default_currency: user.default_currency,
       },
       token,
       refreshToken,
@@ -149,7 +183,23 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
     const userId = authReq.user?.id;
 
     const user = await db('users')
-      .select('id', 'email', 'first_name', 'last_name', 'default_currency', 'timezone', 'created_at')
+      .select(
+        'id', 
+        'email', 
+        'first_name', 
+        'last_name', 
+        'default_currency', 
+        'timezone', 
+        'created_at',
+        'date_of_birth',
+        'age',
+        'gender',
+        'marital_status',
+        'number_of_dependants',
+        'country',
+        'state',
+        'district'
+      )
       .where('id', userId)
       .first();
 
@@ -167,7 +217,20 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
   try {
     const authReq = req as any;
     const userId = authReq.user?.id;
-    const { first_name, last_name, default_currency, timezone } = req.body;
+    const { 
+      first_name, 
+      last_name, 
+      default_currency, 
+      timezone,
+      date_of_birth,
+      age,
+      gender,
+      marital_status,
+      number_of_dependants,
+      country,
+      state,
+      district
+    } = req.body;
 
     const [user] = await db('users')
       .where('id', userId)
@@ -176,6 +239,14 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         last_name,
         default_currency,
         timezone,
+        date_of_birth,
+        age,
+        gender,
+        marital_status,
+        number_of_dependants,
+        country,
+        state,
+        district,
         updated_at: db.fn.now(),
       })
       .returning('*');
@@ -188,6 +259,14 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         last_name: user.last_name,
         default_currency: user.default_currency,
         timezone: user.timezone,
+        date_of_birth: user.date_of_birth,
+        age: user.age,
+        gender: user.gender,
+        marital_status: user.marital_status,
+        number_of_dependants: user.number_of_dependants,
+        country: user.country,
+        state: user.state,
+        district: user.district,
       },
     });
   } catch (error) {

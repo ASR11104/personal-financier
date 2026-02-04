@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { categoryApi } from '../api/category';
-import type { CreateCategoryParams, UpdateCategoryParams, CreateSubCategoryParams, UpdateSubCategoryParams } from '../api/category';
+import type { CreateCategoryParams, UpdateCategoryParams, CreateTagParams, UpdateTagParams } from '../api/category';
 
 export const useCategories = (params?: { type?: string }) => {
   return useQuery({
@@ -52,53 +52,53 @@ export const useDeleteCategory = () => {
   });
 };
 
-// SubCategories
-export const useSubCategories = (params?: { category_id?: string }) => {
+// Tags (replaces SubCategories)
+export const useTags = (params?: { search?: string }) => {
   return useQuery({
-    queryKey: ['subCategories', params],
-    queryFn: () => categoryApi.getSubCategories(params),
+    queryKey: ['tags', params],
+    queryFn: () => categoryApi.getTags(params),
   });
 };
 
-export const useSubCategory = (id: string) => {
+export const useTag = (id: string) => {
   return useQuery({
-    queryKey: ['subCategory', id],
-    queryFn: () => categoryApi.getSubCategoryById(id),
+    queryKey: ['tag', id],
+    queryFn: () => categoryApi.getTagById(id),
     enabled: !!id,
   });
 };
 
-export const useCreateSubCategory = () => {
+export const useCreateTag = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: CreateSubCategoryParams) => categoryApi.createSubCategory(params),
+    mutationFn: (params: CreateTagParams) => categoryApi.createTag(params),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subCategories'] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
     },
   });
 };
 
-export const useUpdateSubCategory = () => {
+export const useUpdateTag = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, params }: { id: string; params: UpdateSubCategoryParams }) =>
-      categoryApi.updateSubCategory(id, params),
+    mutationFn: ({ id, params }: { id: string; params: UpdateTagParams }) =>
+      categoryApi.updateTag(id, params),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['subCategories'] });
-      queryClient.invalidateQueries({ queryKey: ['subCategory', id] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['tag', id] });
     },
   });
 };
 
-export const useDeleteSubCategory = () => {
+export const useDeleteTag = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => categoryApi.deleteSubCategory(id),
+    mutationFn: (id: string) => categoryApi.deleteTag(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subCategories'] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
     },
   });
 };

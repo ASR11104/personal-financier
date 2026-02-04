@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Account, AccountBalance, AccountDetails } from '../types';
+import type { Account, AccountBalance } from '../types';
 
 export interface AccountDetailsParams {
   credit_limit?: number;
@@ -71,6 +71,11 @@ export const accountApi = {
 
   deleteAccount: async (id: string): Promise<{ message: string }> => {
     const response = await api.delete<{ message: string }>(`/accounts/${id}`);
+    return response.data;
+  },
+
+  reactivateAccount: async (id: string): Promise<{ account: Account; message: string }> => {
+    const response = await api.post<{ account: Account; message: string }>(`/accounts/${id}/reactivate`);
     return response.data;
   },
 };

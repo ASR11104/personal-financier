@@ -1,24 +1,23 @@
 import { useState } from 'react';
 import {
   useCategories,
-  useSubCategories,
+  useTags,
   useCreateCategory,
   useUpdateCategory,
   useDeleteCategory,
-  useCreateSubCategory,
-  useUpdateSubCategory,
-  useDeleteSubCategory,
+  useCreateTag,
+  useUpdateTag,
+  useDeleteTag,
 } from '../hooks';
 import { Button, Card, CardContent, Input, Select, Alert, AlertDescription } from '../components/ui';
 import { formatDate } from '../utils/format';
 
 export function Categories() {
-  const [activeTab, setActiveTab] = useState<'categories' | 'subcategories'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'tags'>('categories');
   const [showAddCategory, setShowAddCategory] = useState(false);
-  const [showAddSubCategory, setShowAddSubCategory] = useState(false);
+  const [showAddTag, setShowAddTag] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [editingSubCategory, setEditingSubCategory] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [editingTag, setEditingTag] = useState<string | null>(null);
 
   const [categoryForm, setCategoryForm] = useState({
     name: '',
@@ -26,29 +25,26 @@ export function Categories() {
     description: '',
   });
 
-  const [subCategoryForm, setSubCategoryForm] = useState({
-    category_id: '',
+  const [tagForm, setTagForm] = useState({
     name: '',
-    description: '',
+    color: '#3B82F6',
   });
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
-  const { data: subCategoriesData, isLoading: subCategoriesLoading } = useSubCategories(
-    selectedCategory ? { category_id: selectedCategory } : undefined
-  );
+  const { data: tagsData, isLoading: tagsLoading } = useTags();
 
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
-  const createSubCategory = useCreateSubCategory();
-  const updateSubCategory = useUpdateSubCategory();
-  const deleteSubCategory = useDeleteSubCategory();
+  const createTag = useCreateTag();
+  const updateTag = useUpdateTag();
+  const deleteTag = useDeleteTag();
 
   const categories = categoriesData?.categories || [];
-  const subCategories = subCategoriesData?.sub_categories || [];
+  const tags = tagsData?.tags || [];
 
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,28 +71,28 @@ export function Categories() {
     }
   };
 
-  const handleSubCategorySubmit = async (e: React.FormEvent) => {
+  const handleTagSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      if (editingSubCategory) {
-        await updateSubCategory.mutateAsync({
-          id: editingSubCategory,
-          params: { name: subCategoryForm.name, description: subCategoryForm.description },
+      if (editingTag) {
+        await updateTag.mutateAsync({
+          id: editingTag,
+          params: { name: tagForm.name, color: tagForm.color },
         });
-        setSuccessMessage('SubCategory updated successfully');
+        setSuccessMessage('Tag updated successfully');
       } else {
-        await createSubCategory.mutateAsync(subCategoryForm);
-        setSuccessMessage('SubCategory created successfully');
+        await createTag.mutateAsync(tagForm);
+        setSuccessMessage('Tag created successfully');
       }
-      setShowAddSubCategory(false);
-      setEditingSubCategory(null);
-      setSubCategoryForm({ category_id: '', name: '', description: '' });
+      setShowAddTag(false);
+      setEditingTag(null);
+      setTagForm({ name: '', color: '#3B82F6' });
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || 'Failed to save subcategory');
+      setError(axiosError.response?.data?.message || 'Failed to save tag');
     }
   };
 
@@ -113,16 +109,16 @@ export function Categories() {
     }
   };
 
-  const handleDeleteSubCategory = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this subcategory?')) return;
+  const handleDeleteTag = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this tag?')) return;
 
     try {
-      await deleteSubCategory.mutateAsync(id);
-      setSuccessMessage('SubCategory deleted successfully');
+      await deleteTag.mutateAsync(id);
+      setSuccessMessage('Tag deleted successfully');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || 'Failed to delete subcategory');
+      setError(axiosError.response?.data?.message || 'Failed to delete tag');
     }
   };
 
@@ -136,14 +132,13 @@ export function Categories() {
     setShowAddCategory(true);
   };
 
-  const handleEditSubCategory = (subCategory: typeof subCategories[0]) => {
-    setSubCategoryForm({
-      category_id: subCategory.category_id,
-      name: subCategory.name,
-      description: subCategory.description || '',
+  const handleEditTag = (tag: typeof tags[0]) => {
+    setTagForm({
+      name: tag.name,
+      color: tag.color || '#3B82F6',
     });
-    setEditingSubCategory(subCategory.id);
-    setShowAddSubCategory(true);
+    setEditingTag(tag.id);
+    setShowAddTag(true);
   };
 
   const categoryOptions = categories.map((cat) => ({
@@ -159,8 +154,8 @@ export function Categories() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
-          <p className="text-gray-500 mt-1">Manage your categories and subcategories</p>
+          <h1 className="text-2xl font-bold text-gray-900">Categories & Tags</h1>
+          <p className="text-gray-500 mt-1">Manage your categories and tags</p>
         </div>
       </div>
 
@@ -190,14 +185,14 @@ export function Categories() {
             Categories
           </button>
           <button
-            onClick={() => setActiveTab('subcategories')}
+            onClick={() => setActiveTab('tags')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'subcategories'
+              activeTab === 'tags'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            SubCategories
+            Tags
           </button>
         </nav>
       </div>
@@ -335,59 +330,55 @@ export function Categories() {
         </div>
       )}
 
-      {/* SubCategories Tab */}
-      {activeTab === 'subcategories' && (
+      {/* Tags Tab */}
+      {activeTab === 'tags' && (
         <div className="space-y-4">
-          <div className="flex justify-end gap-4">
-            <Select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              options={[{ value: '', label: 'All Categories' }, ...categoryOptions]}
-              placeholder="Filter by category"
-              className="w-48"
-            />
-            <Button onClick={() => setShowAddSubCategory(true)}>Add SubCategory</Button>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowAddTag(true)}>Add Tag</Button>
           </div>
 
-          {showAddSubCategory && (
+          {showAddTag && (
             <Card>
               <CardContent>
                 <h3 className="text-lg font-medium mb-4">
-                  {editingSubCategory ? 'Edit SubCategory' : 'Add New SubCategory'}
+                  {editingTag ? 'Edit Tag' : 'Add New Tag'}
                 </h3>
-                <form onSubmit={handleSubCategorySubmit} className="space-y-4">
-                  <Select
-                    label="Category"
-                    value={subCategoryForm.category_id}
-                    onChange={(e) => setSubCategoryForm({ ...subCategoryForm, category_id: e.target.value })}
-                    options={categoryOptions}
-                    placeholder="Select a category"
-                    required
-                  />
+                <form onSubmit={handleTagSubmit} className="space-y-4">
                   <Input
                     label="Name"
-                    value={subCategoryForm.name}
-                    onChange={(e) => setSubCategoryForm({ ...subCategoryForm, name: e.target.value })}
-                    placeholder="SubCategory name"
+                    value={tagForm.name}
+                    onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
+                    placeholder="Tag name"
                     required
                   />
-                  <Input
-                    label="Description"
-                    value={subCategoryForm.description}
-                    onChange={(e) => setSubCategoryForm({ ...subCategoryForm, description: e.target.value })}
-                    placeholder="Optional description"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={tagForm.color}
+                        onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
+                        className="h-10 w-20 rounded border border-gray-300"
+                      />
+                      <Input
+                        value={tagForm.color}
+                        onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
+                        placeholder="#3B82F6"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
                   <div className="flex gap-3">
-                    <Button type="submit" isLoading={createSubCategory.isPending || updateSubCategory.isPending}>
-                      {editingSubCategory ? 'Update' : 'Create'}
+                    <Button type="submit" isLoading={createTag.isPending || updateTag.isPending}>
+                      {editingTag ? 'Update' : 'Create'}
                     </Button>
                     <Button
                       type="button"
                       variant="secondary"
                       onClick={() => {
-                        setShowAddSubCategory(false);
-                        setEditingSubCategory(null);
-                        setSubCategoryForm({ category_id: '', name: '', description: '' });
+                        setShowAddTag(false);
+                        setEditingTag(null);
+                        setTagForm({ name: '', color: '#3B82F6' });
                       }}
                     >
                       Cancel
@@ -398,61 +389,66 @@ export function Categories() {
             </Card>
           )}
 
-          <Card>
-            <CardContent className="p-0">
-              {subCategories.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-500 border-b bg-gray-50">
-                        <th className="px-4 py-3 font-medium">Name</th>
-                        <th className="px-4 py-3 font-medium">Category</th>
-                        <th className="px-4 py-3 font-medium">Description</th>
-                        <th className="px-4 py-3 font-medium">Created</th>
-                        <th className="px-4 py-3 font-medium text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {subCategories.map((subCategory) => (
-                        <tr key={subCategory.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium">{subCategory.name}</td>
-                          <td className="px-4 py-3 text-sm">{subCategory.category_name || '-'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
-                            {subCategory.description || '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
-                            {formatDate(subCategory.created_at)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => handleEditSubCategory(subCategory)}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSubCategory(subCategory.id)}
-                                className="text-red-600 hover:text-red-800 text-sm font-medium"
-                                disabled={deleteSubCategory.isPending}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
+          {tagsLoading ? (
+            <div className="text-gray-500">Loading tags...</div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                {tags.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-sm text-gray-500 border-b bg-gray-50">
+                          <th className="px-4 py-3 font-medium">Color</th>
+                          <th className="px-4 py-3 font-medium">Name</th>
+                          <th className="px-4 py-3 font-medium">Created</th>
+                          <th className="px-4 py-3 font-medium text-right">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 mb-4">No subcategories found</p>
-                  <Button onClick={() => setShowAddSubCategory(true)}>Add your first subcategory</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </thead>
+                      <tbody>
+                        {tags.map((tag) => (
+                          <tr key={tag.id} className="border-b hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm">
+                              <div
+                                className="w-6 h-6 rounded-full"
+                                style={{ backgroundColor: tag.color || '#3B82F6' }}
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium">{tag.name}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                              {formatDate(tag.created_at)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleEditTag(tag)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTag(tag.id)}
+                                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                  disabled={deleteTag.isPending}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 mb-4">No tags found</p>
+                    <Button onClick={() => setShowAddTag(true)}>Add your first tag</Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>

@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateAccount } from '../hooks';
+import { useCreateAccount, useProfile } from '../hooks';
 import { Button, Card, Input, Select, Alert, AlertDescription } from '../components/ui';
 
 export function AddAccount() {
   const navigate = useNavigate();
+  const { data: profileData } = useProfile();
   const [formData, setFormData] = useState({
     name: '',
     type: '' as 'checking' | 'savings' | 'credit_card' | 'cash' | 'investment' | 'loan' | '',
-    currency: 'USD',
+    currency: profileData?.user.default_currency || 'USD',
     institution_name: '',
     balance: '',
     // Credit card fields
@@ -86,6 +87,7 @@ export function AddAccount() {
 
   const showCreditCardFields = formData.type === 'credit_card';
   const showLoanFields = formData.type === 'loan';
+  const showBalanceField = ['checking', 'savings', 'cash'].includes(formData.type);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -130,16 +132,19 @@ export function AddAccount() {
             required
           />
 
-          <Input
-            label="Initial Balance"
-            type="number"
-            name="balance"
-            value={formData.balance}
-            onChange={handleChange}
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-          />
+          {/* Initial Balance - only for checking, savings, cash */}
+          {showBalanceField && (
+            <Input
+              label="Initial Balance"
+              type="number"
+              name="balance"
+              value={formData.balance}
+              onChange={handleChange}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+            />
+          )}
 
           <Input
             label="Institution Name"

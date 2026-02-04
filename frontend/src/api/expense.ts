@@ -6,6 +6,7 @@ export interface GetExpensesParams {
   end_date?: string;
   category_id?: string;
   account_id?: string;
+  tag_id?: string;
   limit?: number;
   offset?: number;
 }
@@ -13,10 +14,12 @@ export interface GetExpensesParams {
 export interface CreateExpenseParams {
   account_id: string;
   category_id: string;
-  sub_category_id?: string;
   amount: number;
   description?: string;
   expense_date: string;
+  tag_ids?: string[];
+  credit_card_account_id?: string;
+  loan_account_id?: string;
 }
 
 export interface UpdateExpenseParams {
@@ -24,7 +27,9 @@ export interface UpdateExpenseParams {
   description?: string;
   expense_date?: string;
   category_id?: string;
-  sub_category_id?: string;
+  tag_ids?: string[];
+  credit_card_account_id?: string;
+  loan_account_id?: string;
 }
 
 export interface ExpenseListResponse {

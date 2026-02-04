@@ -12,6 +12,7 @@ router.post(
     body('password').isLength({ min: 8 }),
     body('first_name').trim().notEmpty(),
     body('last_name').optional().trim(),
+    body('default_currency').optional().isLength({ min: 3, max: 3 }),
   ],
   authController.register
 );

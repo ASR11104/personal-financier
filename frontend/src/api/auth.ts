@@ -11,6 +11,15 @@ export interface RegisterParams {
   password: string;
   first_name: string;
   last_name?: string;
+  default_currency?: string;
+  date_of_birth?: string;
+  age?: number;
+  gender?: string;
+  marital_status?: string;
+  number_of_dependants?: number;
+  country?: string;
+  state?: string;
+  district?: string;
 }
 
 export interface UpdateProfileParams {
@@ -18,6 +27,14 @@ export interface UpdateProfileParams {
   last_name?: string;
   default_currency?: string;
   timezone?: string;
+  date_of_birth?: string;
+  age?: number;
+  gender?: string;
+  marital_status?: string;
+  number_of_dependants?: number;
+  country?: string;
+  state?: string;
+  district?: string;
 }
 
 export const authApi = {

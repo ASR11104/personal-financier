@@ -1,4 +1,4 @@
-import { useAccounts, useAccountBalance, useExpenseSummary, useExpenses } from '../hooks';
+import { useAccounts, useAccountBalance, useExpenseSummary, useExpenses, useProfile } from '../hooks';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui';
 import { formatCurrency, formatDate } from '../utils/format';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -10,6 +10,7 @@ export function Dashboard() {
   const { data: balanceData, isLoading: balanceLoading } = useAccountBalance();
   const { data: summaryData, isLoading: summaryLoading } = useExpenseSummary();
   const { data: expensesData, isLoading: expensesLoading } = useExpenses({ limit: 5 });
+  const { data: profileData } = useProfile();
 
   if (accountsLoading || balanceLoading || summaryLoading) {
     return (
@@ -33,19 +34,20 @@ export function Dashboard() {
   const categoryData = summaryData?.by_category || [];
 
   const accounts = accountsData?.accounts || [];
-  
+  const currency = profileData?.user.default_currency || 'USD';
+
   // Calculate totals
   const totalCreditLimit = accounts
     .filter(a => a.type === 'credit_card' && a.details?.credit_limit)
-    .reduce((sum, a) => sum + (a.details?.credit_limit || 0), 0);
+    .reduce((sum, a) => sum + Number(a.details?.credit_limit || 0), 0);
   
   const totalAvailableCredit = accounts
-    .filter(a => a.type === 'credit_card' && a.details?.credit_limit)
-    .reduce((sum, a) => sum + ((a.details?.credit_limit || 0) - a.balance), 0);
+    .filter(a => a.type === 'credit_card' && a.details?.available_credit)
+    .reduce((sum, a) => sum + (Number(a.details?.available_credit || 0)), 0);
   
   const totalLoanBalance = accounts
     .filter(a => a.type === 'loan' && a.details?.loan_balance)
-    .reduce((sum, a) => sum + (a.details?.loan_balance || 0), 0);
+    .reduce((sum, a) => sum + Number(a.details?.loan_balance || 0), 0);
 
   const balanceBreakdown = [
     { name: 'Checking', value: Number(balances.checking) },
@@ -67,7 +69,7 @@ export function Dashboard() {
           <CardContent className="pt-6">
             <div className="text-sm text-gray-500 mb-1">Total Balance</div>
             <div className="text-2xl font-bold text-gray-900">
-              {formatCurrency(Number(balances.total_balance))}
+              {formatCurrency(Number(balances.total_balance), currency)}
             </div>
           </CardContent>
         </Card>
@@ -76,10 +78,10 @@ export function Dashboard() {
           <CardContent className="pt-6">
             <div className="text-sm text-gray-500 mb-1">Credit Limit</div>
             <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency(totalCreditLimit)}
+              {formatCurrency(totalCreditLimit, currency)}
             </div>
             <div className="text-sm text-gray-500 mt-1">
-              Available: {formatCurrency(totalAvailableCredit)}
+              Available: {formatCurrency(totalAvailableCredit, currency)}
             </div>
           </CardContent>
         </Card>
@@ -88,7 +90,7 @@ export function Dashboard() {
           <CardContent className="pt-6">
             <div className="text-sm text-gray-500 mb-1">Loan Balance</div>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalLoanBalance)}
+              {formatCurrency(totalLoanBalance, currency)}
             </div>
             <div className="text-sm text-gray-500 mt-1">
               {accounts.filter(a => a.type === 'loan').length} loans
@@ -100,7 +102,7 @@ export function Dashboard() {
           <CardContent className="pt-6">
             <div className="text-sm text-gray-500 mb-1">Total Expenses</div>
             <div className="text-2xl font-bold text-gray-900">
-              {formatCurrency(Number(summary.total_amount))}
+              {formatCurrency(Number(summary.total_amount), currency)}
             </div>
             <div className="text-sm text-gray-500 mt-1">
               {summary.total_count} transactions
@@ -214,7 +216,7 @@ export function Dashboard() {
                         {expense.category_name || '-'}
                       </td>
                       <td className="py-3 text-sm text-right font-medium">
-                        {formatCurrency(expense.amount)}
+                        {formatCurrency(expense.amount, currency)}
                       </td>
                     </tr>
                   ))}

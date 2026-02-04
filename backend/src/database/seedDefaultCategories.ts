@@ -1,106 +1,92 @@
 import { db } from './connection';
+import { SYSTEM_USER_ID, SYSTEM_USER_EMAIL, SYSTEM_USER_NAME } from '../constants';
 
 interface DefaultCategory {
   name: string;
   type: 'income' | 'expense' | 'transfer';
   description?: string;
-  subCategories: { name: string; description?: string }[];
 }
 
 const defaultCategories: DefaultCategory[] = [
   {
+    name: 'Income',
+    type: 'income',
+    description: 'Salary and other income',
+  },
+  {
+    name: 'Investment',
+    type: 'income',
+    description: 'Investment income',
+  },
+  {
+    name: 'Life Style',
+    type: 'expense',
+    description: 'Lifestyle and personal expenses',
+  },
+  {
+    name: 'Travel',
+    type: 'expense',
+    description: 'Travel-related expenses',
+  },
+  {
     name: 'Food',
     type: 'expense',
     description: 'Food and dining expenses',
-    subCategories: [
-      { name: 'Dine In', description: 'Restaurant dining' },
-      { name: 'Take Out', description: 'Takeout orders' },
-      { name: 'Swiggy', description: 'Swiggy orders' },
-    ],
   },
   {
     name: 'Shopping',
     type: 'expense',
     description: 'Shopping expenses',
-    subCategories: [
-      { name: 'Amazon', description: 'Amazon purchases' },
-      { name: 'Online Merchant', description: 'Other online stores' },
-      { name: 'Retail Merchant', description: 'In-store purchases' },
-      { name: 'Groceries', description: 'Grocery shopping' },
-      { name: 'Swiggy Instamart', description: 'Swiggy Instamart orders' },
-    ],
   },
   {
-    name: 'Bill',
+    name: 'Household',
     type: 'expense',
-    description: 'Bill payments',
-    subCategories: [
-      { name: 'Electricity', description: 'Electricity bill' },
-      { name: 'Wifi', description: 'Internet/Wifi bill' },
-      { name: 'Rent', description: 'Rent payment' },
-      { name: 'Term Insurance', description: 'Term insurance premium' },
-    ],
+    description: 'Household expenses',
   },
   {
     name: 'Credit Card',
     type: 'expense',
     description: 'Credit card payments',
-    subCategories: [],
   },
   {
     name: 'Loan',
     type: 'expense',
     description: 'Loan payments',
-    subCategories: [],
   },
 ];
 
 export async function seedDefaultCategories(): Promise<void> {
   try {
+    // Ensure system user exists
+    const existingUser = await db('users').where('id', SYSTEM_USER_ID).first();
+    
+    if (!existingUser) {
+      await db('users').insert({
+        id: SYSTEM_USER_ID,
+        email: SYSTEM_USER_EMAIL,
+        first_name: SYSTEM_USER_NAME,
+        password_hash: 'system',
+        created_at: new Date(),
+      });
+      console.log('Created system user for default categories');
+    }
+    
     for (const category of defaultCategories) {
-      // Check if category already exists (system-wide, user_id is null)
+      // Check if category already exists for system user
       const existingCategory = await db('categories')
         .where('name', category.name)
-        .whereNull('user_id')
+        .where('user_id', SYSTEM_USER_ID)
         .first();
 
       if (!existingCategory) {
-        // Create the category
-        const [newCategory] = await db('categories')
-          .insert({
-            name: category.name,
-            type: category.type,
-            description: category.description,
-          })
-          .returning('*');
-
-        // Create subcategories
-        for (const subCat of category.subCategories) {
-          await db('sub_categories').insert({
-            category_id: newCategory.id,
-            name: subCat.name,
-            description: subCat.description,
-          });
-        }
-
+        // Create the category for system user
+        await db('categories').insert({
+          name: category.name,
+          type: category.type,
+          description: category.description,
+          user_id: SYSTEM_USER_ID,
+        });
         console.log(`Created category: ${category.name}`);
-      } else {
-        // Check and add missing subcategories
-        for (const subCat of category.subCategories) {
-          const existingSubCat = await db('sub_categories')
-            .where('category_id', existingCategory.id)
-            .where('name', subCat.name)
-            .first();
-
-          if (!existingSubCat) {
-            await db('sub_categories').insert({
-              category_id: existingCategory.id,
-              name: subCat.name,
-              description: subCat.description,
-            });
-            console.log(`Created subcategory: ${subCat.name} for ${category.name}`);
-          }
-        }
       }
     }
     console.log('Default categories seeded successfully');

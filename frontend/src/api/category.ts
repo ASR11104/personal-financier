@@ -1,12 +1,12 @@
 import { api } from './client';
-import type { Category, SubCategory } from '../types';
+import type { Category, Tag } from '../types';
 
 export interface CategoryResponse {
   categories: Category[];
 }
 
-export interface SubCategoryResponse {
-  sub_categories: (SubCategory & { category_name?: string; category_type?: string })[];
+export interface TagResponse {
+  tags: Tag[];
 }
 
 export interface CreateCategoryParams {
@@ -20,15 +20,14 @@ export interface UpdateCategoryParams {
   description?: string;
 }
 
-export interface CreateSubCategoryParams {
-  category_id: string;
+export interface CreateTagParams {
   name: string;
-  description?: string;
+  color?: string;
 }
 
-export interface UpdateSubCategoryParams {
+export interface UpdateTagParams {
   name?: string;
-  description?: string;
+  color?: string;
 }
 
 export const categoryApi = {
@@ -58,29 +57,29 @@ export const categoryApi = {
     return response.data;
   },
 
-  // SubCategories
-  getSubCategories: async (params?: { category_id?: string }): Promise<SubCategoryResponse> => {
-    const response = await api.get<SubCategoryResponse>('/categories/sub-categories', { params });
+  // Tags (replaces SubCategories)
+  getTags: async (params?: { search?: string }): Promise<TagResponse> => {
+    const response = await api.get<TagResponse>('/categories/tags', { params });
     return response.data;
   },
 
-  getSubCategoryById: async (id: string): Promise<{ sub_category: SubCategory & { category_name?: string } }> => {
-    const response = await api.get<{ sub_category: SubCategory & { category_name?: string } }>(`/categories/sub-categories/${id}`);
+  getTagById: async (id: string): Promise<{ tag: Tag }> => {
+    const response = await api.get<{ tag: Tag }>(`/categories/tags/${id}`);
     return response.data;
   },
 
-  createSubCategory: async (params: CreateSubCategoryParams): Promise<{ sub_category: SubCategory }> => {
-    const response = await api.post<{ sub_category: SubCategory }>('/categories/sub-categories', params);
+  createTag: async (params: CreateTagParams): Promise<{ tag: Tag }> => {
+    const response = await api.post<{ tag: Tag }>('/categories/tags', params);
     return response.data;
   },
 
-  updateSubCategory: async (id: string, params: UpdateSubCategoryParams): Promise<{ sub_category: SubCategory }> => {
-    const response = await api.put<{ sub_category: SubCategory }>(`/categories/sub-categories/${id}`, params);
+  updateTag: async (id: string, params: UpdateTagParams): Promise<{ tag: Tag }> => {
+    const response = await api.put<{ tag: Tag }>(`/categories/tags/${id}`, params);
     return response.data;
   },
 
-  deleteSubCategory: async (id: string): Promise<{ message: string }> => {
-    const response = await api.delete<{ message: string }>(`/categories/sub-categories/${id}`);
+  deleteTag: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(`/categories/tags/${id}`);
     return response.data;
   },
 };

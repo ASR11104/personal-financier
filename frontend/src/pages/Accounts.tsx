@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAccounts, useDeleteAccount } from '../hooks';
-import { Card, CardContent, Button, Alert, AlertDescription } from '../components/ui';
+import { Card, CardContent, Button, Alert, AlertDescription, Select } from '../components/ui';
 import { formatCurrency, formatDate } from '../utils/format';
 
 export function Accounts() {
@@ -9,6 +9,7 @@ export function Accounts() {
   const deleteAccount = useDeleteAccount();
   const [deleteError, setDeleteError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [filterType, setFilterType] = useState('savings');
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this account?')) return;
@@ -24,6 +25,11 @@ export function Accounts() {
   };
 
   const accounts = data?.accounts || [];
+
+  // Filter accounts by type
+  const filteredAccounts = filterType === 'all' 
+    ? accounts 
+    : accounts.filter(account => account.type === filterType);
 
   if (isLoading) {
     return (
@@ -82,9 +88,31 @@ export function Accounts() {
         </Alert>
       )}
 
+      {/* Filter by account type */}
+      <div className="flex items-center gap-4">
+        <label htmlFor="filter-type" className="text-sm font-medium text-gray-700">
+          Filter by:
+        </label>
+        <Select
+          id="filter-type"
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="w-48"
+          options={[
+            { value: 'all', label: 'All Accounts' },
+            { value: 'checking', label: 'Checking' },
+            { value: 'savings', label: 'Savings' },
+            { value: 'credit_card', label: 'Credit Card' },
+            { value: 'cash', label: 'Cash' },
+            { value: 'investment', label: 'Investment' },
+            { value: 'loan', label: 'Loan' },
+          ]}
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {accounts.length > 0 ? (
-          accounts.map((account) => (
+        {filteredAccounts.length > 0 ? (
+          filteredAccounts.map((account) => (
             <Card key={account.id} className="hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
@@ -103,12 +131,12 @@ export function Accounts() {
                 <div className="mt-4">
                   {account.type === 'credit_card' ? (
                     <>
-                      <p className="text-sm text-gray-500">Credit Limit</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {formatCurrency(account.details?.credit_limit || 0, account.currency)}
+                      <p className="text-sm text-gray-500">Available Credit</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {formatCurrency(account.details?.available_credit || 0, account.currency)}
                       </p>
                       <p className="text-sm text-gray-500 mt-1">
-                        Available: {formatCurrency((account.details?.credit_limit || 0) - account.balance, account.currency)}
+                        Credit Limit: {formatCurrency(account.details?.credit_limit || 0, account.currency)}
                       </p>
                     </>
                   ) : account.type === 'loan' ? (

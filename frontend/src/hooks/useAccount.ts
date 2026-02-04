@@ -61,3 +61,15 @@ export const useDeleteAccount = () => {
     },
   });
 };
+
+export const useReactivateAccount = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => accountApi.reactivateAccount(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['accountBalance'] });
+    },
+  });
+};

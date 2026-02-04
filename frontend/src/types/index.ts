@@ -6,6 +6,14 @@ export interface User {
   default_currency?: string;
   timezone?: string;
   created_at?: string;
+  date_of_birth?: string;
+  age?: number;
+  gender?: string;
+  marital_status?: string;
+  number_of_dependants?: number;
+  country?: string;
+  state?: string;
+  district?: string;
 }
 
 export interface AuthResponse {
@@ -50,11 +58,11 @@ export interface Category {
   created_at: string;
 }
 
-export interface SubCategory {
+export interface Tag {
   id: string;
-  category_id: string;
+  user_id: string;
   name: string;
-  description?: string;
+  color?: string;
   created_at: string;
 }
 
@@ -63,7 +71,6 @@ export interface Expense {
   user_id: string;
   account_id: string;
   category_id: string;
-  sub_category_id?: string;
   recurring_expense_id?: string;
   amount: number;
   description?: string;
@@ -72,8 +79,10 @@ export interface Expense {
   updated_at: string;
   deleted_at?: string;
   category_name?: string;
-  sub_category_name?: string;
   account_name?: string;
+  tags?: Tag[];
+  credit_card_account_id?: string;
+  loan_account_id?: string;
 }
 
 export interface ExpenseSummary {
@@ -99,4 +108,30 @@ export interface AccountBalance {
 export interface ApiError {
   message: string;
   statusCode?: number;
+}
+
+export interface Income {
+  id: string;
+  user_id: string;
+  account_id: string;
+  category_id: string;
+  amount: number;
+  description?: string;
+  income_date: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  category_name?: string;
+  account_name?: string;
+  tags?: Tag[];
+}
+
+export interface IncomeSummary {
+  total_count: number;
+  total_amount: number;
+}
+
+export interface IncomeSummaryResponse {
+  summary: IncomeSummary;
+  by_category: Array<{ category: string; total: number }>;
 }
