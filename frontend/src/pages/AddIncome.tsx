@@ -54,7 +54,12 @@ export function AddIncome() {
     }
   };
 
-  const accountOptions = accounts.map((acc) => ({
+  // Filter out credit cards and loans - income cannot be deposited into these account types
+  const filteredAccounts = accounts.filter(
+    (acc) => acc.type !== 'credit_card' && acc.type !== 'loan'
+  );
+
+  const accountOptions = filteredAccounts.map((acc) => ({
     value: acc.id,
     label: `${acc.name} (${acc.type})`,
   }));

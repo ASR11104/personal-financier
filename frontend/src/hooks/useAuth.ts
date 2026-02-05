@@ -30,13 +30,13 @@ export const useRegister = () => {
 };
 
 export const useLogout = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   return () => {
     authApi.logout();
     queryClient.clear();
-    navigate('/login');
+    // Use window.location.href to ensure a clean redirect
+    window.location.href = '/login';
   };
 };
 

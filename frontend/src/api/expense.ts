@@ -34,6 +34,7 @@ export interface UpdateExpenseParams {
 
 export interface ExpenseListResponse {
   expenses: Expense[];
+  total: number;
 }
 
 export const expenseApi = {

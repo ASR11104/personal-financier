@@ -9,7 +9,7 @@ export function Accounts() {
   const deleteAccount = useDeleteAccount();
   const [deleteError, setDeleteError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [filterType, setFilterType] = useState('savings');
+  const [filterType, setFilterType] = useState('all');
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this account?')) return;

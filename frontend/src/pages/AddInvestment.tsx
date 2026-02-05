@@ -19,6 +19,7 @@ interface FormData {
   sip_end_date: string;
   sip_day_of_month: string;
   sip_total_installments: string;
+  is_existing: boolean;
 }
 
 export function AddInvestment() {
@@ -40,6 +41,7 @@ export function AddInvestment() {
     sip_end_date: '',
     sip_day_of_month: '1',
     sip_total_installments: '',
+    is_existing: false,
   });
   const [error, setError] = useState('');
 
@@ -68,13 +70,24 @@ export function AddInvestment() {
     e.preventDefault();
     setError('');
 
+    // Validate account_id is provided for new investments
+    if (!formData.is_existing && !formData.account_id) {
+      setError('Please select a source account for the investment');
+      return;
+    }
+
     try {
       const params: any = {
-        account_id: formData.account_id,
         investment_type_id: formData.investment_type_id,
         name: formData.name,
         description: formData.description || undefined,
+        is_existing: formData.is_existing,
       };
+
+      // Only include account_id for new investments
+      if (!formData.is_existing && formData.account_id) {
+        params.account_id = formData.account_id;
+      }
 
       if (formData.is_sip) {
         params.is_sip = true;
@@ -138,15 +151,18 @@ export function AddInvestment() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Select
-            label="Source Account"
-            name="account_id"
-            value={formData.account_id}
-            onChange={handleInputChange}
-            options={accountOptions}
-            placeholder="Select source account"
-            required
-          />
+          {/* Source Account - only shown for new investments */}
+          {!formData.is_existing && (
+            <Select
+              label="Source Account"
+              name="account_id"
+              value={formData.account_id}
+              onChange={handleInputChange}
+              options={accountOptions}
+              placeholder="Select source account"
+              required
+            />
+          )}
 
           <Select
             label="Investment Type"
@@ -222,6 +238,31 @@ export function AddInvestment() {
             onChange={handleInputChange}
             placeholder="Additional notes about this investment"
           />
+
+          {/* Existing Investment Section */}
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <div className="flex items-center mb-4">
+              <input
+                type="checkbox"
+                name="is_existing"
+                id="is_existing"
+                checked={formData.is_existing}
+                onChange={handleCheckboxChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="is_existing" className="ml-2 block text-sm font-medium text-gray-900">
+                This is an existing investment (won't affect account balance)
+              </label>
+            </div>
+
+            {formData.is_existing && (
+              <div className="bg-yellow-50 p-4 rounded-lg mb-4">
+                <p className="text-sm text-yellow-800">
+                  This investment was made in the past. The investment will be recorded but no money will be deducted from your account balance.
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* SIP Section */}
           <div className="border-t border-gray-200 pt-4 mt-4">

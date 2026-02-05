@@ -251,7 +251,7 @@ export function EditAccount() {
                   value={formData.interest_rate}
                   onChange={handleChange}
                   placeholder="0.00"
-                  step="0.01"
+                  step="0.0000000001"
                   min="0"
                 />
                 <Input

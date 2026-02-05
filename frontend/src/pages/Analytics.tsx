@@ -48,6 +48,25 @@ export function Analytics() {
   const totalLiabilities = accountAnalytics?.totalLiabilities || 0;
   const creditUtilization = accountAnalytics?.creditCards?.utilization_percentage || 0;
 
+  // Net worth breakdown
+  const breakdown = accountAnalytics?.breakdown || {
+    assets: {
+      checking_savings_cash: 0,
+      investment_accounts: 0,
+      investment_holdings: 0,
+    },
+    liabilities: {
+      credit_cards: 0,
+      loans: 0,
+    },
+  };
+
+  const assetsCheckingSavingsCash = breakdown.assets?.checking_savings_cash || 0;
+  const assetsInvestmentAccounts = breakdown.assets?.investment_accounts || 0;
+  const assetsInvestmentHoldings = breakdown.assets?.investment_holdings || 0;
+  const liabilitiesCreditCards = breakdown.liabilities?.credit_cards || 0;
+  const liabilitiesLoans = breakdown.liabilities?.loans || 0;
+
   // Format monthly data for charts
   const monthlyTrendData = useMemo(() => {
     if (!expenseTrends?.monthly_expenses) return [];
@@ -89,20 +108,20 @@ export function Analytics() {
   // Format tag spending data
   const tagSpendingData = useMemo(() => {
     if (!spendingByTags?.by_tags) return [];
-    return spendingByTags.by_tags.filter(tag => tag.tag_id).map(tag => ({
-      name: tag.tag_name,
+    return spendingByTags.by_tags.map(tag => ({
+      name: tag.tag_id ? tag.tag_name : 'Untagged',
       value: Number(tag.total),
-      color: tag.tag_color || COLORS[0],
+      color: tag.tag_id ? (tag.tag_color || COLORS[0]) : '#9CA3AF',
     }));
   }, [spendingByTags]);
 
   // Format income by tags data
   const incomeByTagsData = useMemo(() => {
     if (!incomeByTags?.by_tags) return [];
-    return incomeByTags.by_tags.filter(tag => tag.tag_id).map(tag => ({
-      name: tag.tag_name,
+    return incomeByTags.by_tags.map(tag => ({
+      name: tag.tag_id ? tag.tag_name : 'Untagged',
       value: Number(tag.total),
-      color: tag.tag_color || COLORS[0],
+      color: tag.tag_id ? (tag.tag_color || COLORS[0]) : '#9CA3AF',
     }));
   }, [incomeByTags]);
 
@@ -111,9 +130,8 @@ export function Analytics() {
     if (!spendingByTags?.by_tags) return {};
     const colors: Record<string, string> = {};
     spendingByTags.by_tags.forEach(tag => {
-      if (tag.tag_id) {
-        colors[tag.tag_name] = tag.tag_color || COLORS[0];
-      }
+      const tagName = tag.tag_id ? tag.tag_name : 'Untagged';
+      colors[tagName] = tag.tag_id ? (tag.tag_color || COLORS[0]) : '#9CA3AF';
     });
     return colors;
   }, [spendingByTags]);
@@ -195,18 +213,121 @@ export function Analytics() {
       </div>
 
       {/* Net Worth and Financial Health */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="space-y-4">
+        {/* Net Worth Summary */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Net Worth</h2>
+            <p className="text-gray-500 mt-1">Your complete financial picture</p>
+          </div>
+        </div>
+
+        {/* Net Worth Main Card */}
         <Card className={netWorth >= 0 ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'}>
           <CardContent className="pt-6">
-            <div className="text-sm text-gray-500 mb-1">Net Worth</div>
-            <div className={`text-2xl font-bold ${netWorth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(netWorth, currency)}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Net Worth</div>
+                <div className={`text-4xl font-bold ${netWorth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(netWorth, currency)}
+                </div>
+              </div>
+              <div className="flex gap-6 text-right">
+                <div>
+                  <div className="text-sm text-gray-500">Total Assets</div>
+                  <div className="text-2xl font-bold text-green-600">{formatCurrency(totalAssets, currency)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Total Liabilities</div>
+                  <div className="text-2xl font-bold text-red-600">{formatCurrency(totalLiabilities, currency)}</div>
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-gray-500 mt-1">
-              Assets: {formatCurrency(totalAssets, currency)} | Liabilities: {formatCurrency(totalLiabilities, currency)}
+
+            {/* Assets Breakdown */}
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Assets Breakdown</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-green-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Checking/Savings/Cash</div>
+                      <div className="font-semibold text-gray-900">{formatCurrency(assetsCheckingSavingsCash, currency)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Investment Accounts</div>
+                      <div className="font-semibold text-gray-900">{formatCurrency(assetsInvestmentAccounts, currency)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Investment Holdings</div>
+                      <div className="font-semibold text-gray-900">{formatCurrency(assetsInvestmentHoldings, currency)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Liabilities Breakdown */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Liabilities Breakdown</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-red-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Credit Cards</div>
+                      <div className="font-semibold text-gray-900">{formatCurrency(liabilitiesCreditCards, currency)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Loans</div>
+                      <div className="font-semibold text-gray-900">{formatCurrency(liabilitiesLoans, currency)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Income vs Expense Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         <Card>
           <CardContent className="pt-6">
@@ -244,8 +365,6 @@ export function Analytics() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Credit Utilization and Debt */}
       {accountAnalytics?.creditCards?.cards && accountAnalytics.creditCards.cards.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {accountAnalytics.creditCards.cards.map((card) => (
@@ -589,24 +708,24 @@ export function Analytics() {
             <CardTitle>Spending by Tags</CardTitle>
           </CardHeader>
           <CardContent>
-            {spendingByTags?.by_tags && spendingByTags.by_tags.length > 0 ? (
+            {tagSpendingData.length > 0 ? (
               <div className="space-y-3">
-                {spendingByTags.by_tags.filter(tag => tag.tag_id).slice(0, 10).map((tag, index) => {
+                {tagSpendingData.slice(0, 10).map((tag, index) => {
                   const percentage = totalExpenses > 0
-                    ? (Number(tag.total) / totalExpenses) * 100
+                    ? (Number(tag.value) / tagSpendingData.reduce((sum, t) => sum + Number(t.value), 0)) * 100
                     : 0;
                   return (
-                    <div key={tag.tag_id || index}>
+                    <div key={tag.name || index}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm text-gray-700 flex items-center gap-2">
                           <span
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: tag.tag_color || COLORS[index % COLORS.length] }}
+                            style={{ backgroundColor: tag.color || COLORS[index % COLORS.length] }}
                           />
-                          {tag.tag_name || 'Unknown'}
+                          {tag.name}
                         </span>
                         <span className="text-sm font-medium text-gray-900">
-                          {formatCurrency(Number(tag.total), currency)} ({percentage.toFixed(1)}%)
+                          {formatCurrency(Number(tag.value), currency)} ({percentage.toFixed(1)}%)
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -614,7 +733,7 @@ export function Analytics() {
                           className="h-2 rounded-full transition-all"
                           style={{
                             width: `${Math.min(percentage, 100)}%`,
-                            backgroundColor: tag.tag_color || COLORS[index % COLORS.length],
+                            backgroundColor: tag.color || COLORS[index % COLORS.length],
                           }}
                         />
                       </div>
@@ -636,24 +755,24 @@ export function Analytics() {
             <CardTitle>Income by Tags</CardTitle>
           </CardHeader>
           <CardContent>
-            {incomeByTags?.by_tags && incomeByTags.by_tags.length > 0 ? (
+            {incomeByTagsData.length > 0 ? (
               <div className="space-y-3">
-                {incomeByTags.by_tags.filter(tag => tag.tag_id).slice(0, 10).map((tag, index) => {
+                {incomeByTagsData.slice(0, 10).map((tag, index) => {
                   const percentage = totalIncomes > 0
-                    ? (Number(tag.total) / totalIncomes) * 100
+                    ? (Number(tag.value) / incomeByTagsData.reduce((sum, t) => sum + Number(t.value), 0)) * 100
                     : 0;
                   return (
-                    <div key={tag.tag_id || index}>
+                    <div key={tag.name || index}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm text-gray-700 flex items-center gap-2">
                           <span
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: tag.tag_color || COLORS[index % COLORS.length] }}
+                            style={{ backgroundColor: tag.color || COLORS[index % COLORS.length] }}
                           />
-                          {tag.tag_name || 'Unknown'}
+                          {tag.name}
                         </span>
                         <span className="text-sm font-medium text-gray-900">
-                          {formatCurrency(Number(tag.total), currency)} ({percentage.toFixed(1)}%)
+                          {formatCurrency(Number(tag.value), currency)} ({percentage.toFixed(1)}%)
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">

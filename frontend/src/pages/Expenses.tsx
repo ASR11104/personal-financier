@@ -1,18 +1,51 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useExpenses, useDeleteExpense, useProfile } from '../hooks';
-import { Card, CardContent, Button, Alert, AlertDescription } from '../components/ui';
+import { useExpenses, useDeleteExpense, useProfile, useCategories, useTags, useAccounts } from '../hooks';
+import { Card, CardContent, Button, Alert, AlertDescription, Select, Input } from '../components/ui';
 import { formatCurrency, formatDate } from '../utils/format';
 
 export function Expenses() {
   const [page, setPage] = useState(1);
   const limit = 20;
-  const { data, isLoading } = useExpenses({ limit, offset: (page - 1) * limit });
-  const deleteExpense = useDeleteExpense();
+  const [filters, setFilters] = useState({
+    start_date: '',
+    end_date: '',
+    category_id: '',
+    tag_id: '',
+    account_id: '',
+  });
   const { data: profileData } = useProfile();
+  const { data: categoriesData } = useCategories();
+  const { data: tagsData } = useTags();
+  const { data: accountsData } = useAccounts();
+  const deleteExpense = useDeleteExpense();
   const [deleteError, setDeleteError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const currency = profileData?.user.default_currency || 'USD';
+
+  const { data, isLoading } = useExpenses({ 
+    limit, 
+    offset: (page - 1) * limit,
+    ...filters 
+  });
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setPage(1); // Reset to first page when filters change
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      start_date: '',
+      end_date: '',
+      category_id: '',
+      tag_id: '',
+      account_id: '',
+    });
+    setPage(1);
+  };
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== '');
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this expense?')) return;
@@ -46,6 +79,71 @@ export function Expenses() {
           <Button>Add Expense</Button>
         </Link>
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="w-40">
+              <Input
+                type="date"
+                label="Start Date"
+                value={filters.start_date}
+                onChange={(e) => handleFilterChange('start_date', e.target.value)}
+              />
+            </div>
+            <div className="w-40">
+              <Input
+                type="date"
+                label="End Date"
+                value={filters.end_date}
+                onChange={(e) => handleFilterChange('end_date', e.target.value)}
+              />
+            </div>
+            <div className="w-48">
+              <Select
+                label="Category"
+                value={filters.category_id}
+                onChange={(e) => handleFilterChange('category_id', e.target.value)}
+                options={(categoriesData?.categories || []).map((cat) => ({
+                  value: cat.id,
+                  label: cat.name,
+                }))}
+                placeholder="All Categories"
+              />
+            </div>
+            <div className="w-48">
+              <Select
+                label="Tag"
+                value={filters.tag_id}
+                onChange={(e) => handleFilterChange('tag_id', e.target.value)}
+                options={(tagsData?.tags || []).map((tag) => ({
+                  value: tag.id,
+                  label: tag.name,
+                }))}
+                placeholder="All Tags"
+              />
+            </div>
+            <div className="w-48">
+              <Select
+                label="Account"
+                value={filters.account_id}
+                onChange={(e) => handleFilterChange('account_id', e.target.value)}
+                options={(accountsData?.accounts || []).map((acc) => ({
+                  value: acc.id,
+                  label: acc.name,
+                }))}
+                placeholder="All Accounts"
+              />
+            </div>
+            {hasActiveFilters && (
+              <Button variant="secondary" size="sm" onClick={clearFilters}>
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {deleteError && (
         <Alert variant="error">
@@ -153,7 +251,7 @@ export function Expenses() {
       {data && data.expenses.length > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">
-            Showing {(page - 1) * limit + 1} to {page * limit} expenses
+            Showing {Math.min((page - 1) * limit + 1, data.total)} to {Math.min(page * limit, data.total)} of {data.total} expenses
           </p>
           <div className="flex gap-2">
             <Button
@@ -168,7 +266,7 @@ export function Expenses() {
               variant="secondary"
               size="sm"
               onClick={() => setPage(page + 1)}
-              disabled={data.expenses.length < limit}
+              disabled={page * limit >= data.total}
             >
               Next
             </Button>

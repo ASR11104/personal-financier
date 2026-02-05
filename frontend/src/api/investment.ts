@@ -29,6 +29,8 @@ export interface CreateInvestmentParams {
   sip_end_date?: string;
   sip_day_of_month?: number;
   sip_total_installments?: number;
+  // Existing investment flag - skips account balance deduction
+  is_existing?: boolean;
 }
 
 export interface UpdateInvestmentParams {

@@ -37,6 +37,17 @@ export interface AccountAnalytics {
   netWorth: number;
   totalAssets: number;
   totalLiabilities: number;
+  breakdown: {
+    assets: {
+      checking_savings_cash: number;
+      investment_accounts: number;
+      investment_holdings: number;
+    };
+    liabilities: {
+      credit_cards: number;
+      loans: number;
+    };
+  };
   creditCards: {
     total_limit: number;
     total_used: number;
