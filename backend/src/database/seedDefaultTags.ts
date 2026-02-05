@@ -1,43 +1,6 @@
 import { db } from './connection';
 import { SYSTEM_USER_ID, SYSTEM_USER_EMAIL, SYSTEM_USER_NAME } from '../constants';
-
-const defaultTags: string[] = [
-  'rent',
-  'subscriptions',
-  'recharge',
-  'groceries',
-  'vegetables',
-  'fruits',
-  'medicine',
-  'medical bill',
-  'debt',
-  'swiggy',
-  'dine in',
-  'take out',
-  'education',
-  'insurance',
-  'outings',
-  'electricity bill',
-  'wifi bill',
-  'parent care',
-  'spouse care',
-  'miscellaneous',
-  'train ticket',
-  'auto/taxi',
-  'metro ticket',
-  'bus ticket',
-  'flight ticket',
-  'cloths',
-  'electronics',
-  'household gadgets',
-  'books',
-  'creditcard bill',
-  'mutual funds',
-  'stocks',
-  'bonds',
-  'salary',
-  'bonds returns'
-];
+import { TAG_COLOR_CONFIG } from '../utils/tagColors';
 
 async function ensureSystemUser(): Promise<string> {
   // Check if system user exists
@@ -62,22 +25,31 @@ export async function seedDefaultTags(): Promise<void> {
   try {
     await ensureSystemUser();
     
-    for (const tag of defaultTags) {
+    for (const config of TAG_COLOR_CONFIG) {
       // Check if tag already exists for system user
       const existingTag = await db('tags')
-        .where('name', tag)
+        .where('name', config.tag)
         .where('user_id', SYSTEM_USER_ID)
         .first();
 
       if (!existingTag) {
         await db('tags').insert({
-          name: tag,
+          name: config.tag,
           user_id: SYSTEM_USER_ID,
+          color: config.color,
         });
-        console.log(`Created tag: ${tag}`);
+        console.log(`Created tag: ${config.tag} with color ${config.color}`);
+      } else {
+        // Update existing tag with color if not set
+        if (!existingTag.color) {
+          await db('tags')
+            .where('id', existingTag.id)
+            .update({ color: config.color });
+          console.log(`Updated tag: ${config.tag} with color ${config.color}`);
+        }
       }
     }
-    console.log('Default tags seeded successfully');
+    console.log('Default tags seeded/updated successfully');
   } catch (error) {
     console.error('Error seeding default tags:', error);
   }

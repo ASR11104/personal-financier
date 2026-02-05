@@ -57,16 +57,20 @@ export const createInvestment = async (req: Request, res: Response, next: NextFu
       sip_end_date,
       sip_day_of_month,
       sip_total_installments,
+      // Existing investment flag - skips account balance deduction
+      is_existing,
     } = req.body;
 
-    // Validate account exists and belongs to user
-    const account = await db('accounts')
-      .where('id', account_id)
-      .where('user_id', userId)
-      .first();
+    // Validate account exists and belongs to user (only required for new investments)
+    if (account_id) {
+      const account = await db('accounts')
+        .where('id', account_id)
+        .where('user_id', userId)
+        .first();
 
-    if (!account) {
-      throw new AppError('Account not found', 404);
+      if (!account) {
+        throw new AppError('Account not found', 404);
+      }
     }
 
     // Validate investment type exists
@@ -88,7 +92,7 @@ export const createInvestment = async (req: Request, res: Response, next: NextFu
     const [investment] = await db('investments')
       .insert({
         user_id: userId,
-        account_id,
+        account_id: account_id || null,
         investment_type_id,
         name,
         amount: investmentAmount,
@@ -108,7 +112,8 @@ export const createInvestment = async (req: Request, res: Response, next: NextFu
       .returning('*');
 
     // For non-SIP investments or SIP with initial lump sum, create ledger entry
-    if (!is_sip && investmentAmount) {
+    // Skip if this is an existing investment (no account balance change needed)
+    if (!is_existing && !is_sip && investmentAmount) {
       // Create ledger entry (negative amount for money going out)
       await db('ledger_entries').insert({
         account_id,
@@ -122,8 +127,9 @@ export const createInvestment = async (req: Request, res: Response, next: NextFu
         .decrement('balance', investmentAmount);
     }
 
-    // If it's an SIP, create the first transaction
-    if (is_sip && sip_amount) {
+    // If it's an SIP with initial lump sum and NOT an existing investment, create the first transaction
+    // For existing SIPs, we don't want to deduct money from accounts
+    if (!is_existing && is_sip && sip_amount) {
       // Process the first SIP transaction
       await processSipTransaction(investment.id, effectivePurchaseDate);
     }
@@ -326,8 +332,8 @@ export const updateInvestment = async (req: Request, res: Response, next: NextFu
       throw new AppError('Cannot update investment that is not active', 400);
     }
 
-    // Revert the old ledger entry and account balance (only for non-SIP or initial amount)
-    if (!investment.is_sip) {
+    // Revert the old ledger entry and account balance (only for non-SIP with account_id)
+    if (!investment.is_sip && investment.account_id) {
       await db('ledger_entries')
         .where('investment_id', id)
         .delete();
@@ -360,16 +366,16 @@ export const updateInvestment = async (req: Request, res: Response, next: NextFu
       })
       .returning('*');
 
-    // For non-SIP investments, create new ledger entry with updated amount
-    if (!updatedInvestment.is_sip) {
+    // For non-SIP investments with account_id, create new ledger entry with updated amount
+    if (!updatedInvestment.is_sip && updatedInvestment.account_id) {
       await db('ledger_entries').insert({
-        account_id: investment.account_id,
+        account_id: updatedInvestment.account_id,
         investment_id: updatedInvestment.id,
         amount: -Number(updatedInvestment.amount),
       });
 
       await db('accounts')
-        .where('id', investment.account_id)
+        .where('id', updatedInvestment.account_id)
         .decrement('balance', updatedInvestment.amount);
     }
 

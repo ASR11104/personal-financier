@@ -202,20 +202,44 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
       .where('accounts.user_id', userId)
       .where('accounts.is_active', true);
 
-    // Calculate totals
-    // For credit cards, use credit_limit - available_credit (from account_details) instead of balance
-    // For loans, use loan_balance (from account_details) instead of balance
-    const totalAssets = accounts
-      .filter(a => !['credit_card', 'loan'].includes(a.type))
-      .reduce((sum, a) => sum + Number(a.balance), 0);
+    // Get all investments for the user
+    const investments = await db('investments')
+      .select(
+        db.raw('COALESCE(SUM(investments.amount - COALESCE(investments.withdrawal_amount, 0)), 0) as total_value')
+      )
+      .where('investments.user_id', userId)
+      .whereNull('investments.deleted_at')
+      .first();
 
-    const totalLiabilities = accounts
+    const totalInvestmentValue = Number(investments?.total_value || 0);
+
+    // Calculate totals
+    // Assets: checking + savings + cash + investment accounts (by balance) + investments
+    const checkingSavingsCash = accounts
+      .filter(a => ['checking', 'savings', 'cash'].includes(a.type))
+      .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+    const investmentAccountBalance = accounts
+      .filter(a => a.type === 'investment')
+      .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+    // Total Assets = checking/savings/cash balance + investment account balance + investment holdings value
+    const totalAssets = checkingSavingsCash + investmentAccountBalance + totalInvestmentValue;
+
+    // Liabilities: credit card balance (credit_limit - available_credit) + loan balance
+    const creditCardBalance = accounts
       .filter(a => a.type === 'credit_card')
       .reduce((sum, a) => sum + Number((a.credit_limit || 0) - (a.available_credit || 0)), 0);
 
+    const loanBalance = accounts
+      .filter(a => a.type === 'loan')
+      .reduce((sum, a) => sum + Number(a.loan_balance || a.balance || 0), 0);
+
+    const totalLiabilities = creditCardBalance + loanBalance;
+
     const netWorth = totalAssets - totalLiabilities;
 
-    // Credit card utilization - use account_details
+    // Credit card utilization
     const creditCards = accounts.filter(a => a.type === 'credit_card');
     const totalCreditLimit = creditCards.reduce((sum, a) => sum + Number(a.credit_limit || 0), 0);
     const totalCreditUsed = creditCards.reduce((sum, a) => sum + Number((a.credit_limit || 0) - (a.available_credit || 0)), 0);
@@ -224,10 +248,10 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
 
     // Loan summary
     const loans = accounts.filter(a => a.type === 'loan');
-    const totalLoanBalance = loans.reduce((sum, a) => sum + Number(a.loan_balance || a.balance), 0);
-    const totalLoanAmount = loans.reduce((sum, a) => sum + Number(a.loan_amount || a.balance), 0);
+    const totalLoanBalance = loans.reduce((sum, a) => sum + Number(a.loan_balance || a.balance || 0), 0);
+    const totalLoanAmount = loans.reduce((sum, a) => sum + Number(a.loan_amount || a.balance || 0), 0);
 
-    // Account breakdown by type - use account_details for credit_card and loan
+    // Account breakdown by type
     const byType = accounts.reduce((acc: Record<string, { count: number; total_balance: number }>, account: any) => {
       const type = account.type;
       if (!acc[type]) {
@@ -240,7 +264,7 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
       } else if (type === 'loan') {
         acc[type].total_balance += Number(account.loan_balance || 0);
       } else {
-        acc[type].total_balance += Number(account.balance);
+        acc[type].total_balance += Number(account.balance || 0);
       }
       return acc;
     }, {});
@@ -249,6 +273,17 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
       netWorth,
       totalAssets,
       totalLiabilities,
+      breakdown: {
+        assets: {
+          checking_savings_cash: checkingSavingsCash,
+          investment_accounts: investmentAccountBalance,
+          investment_holdings: totalInvestmentValue,
+        },
+        liabilities: {
+          credit_cards: creditCardBalance,
+          loans: loanBalance,
+        },
+      },
       creditCards: {
         total_limit: totalCreditLimit,
         total_used: totalCreditUsed,

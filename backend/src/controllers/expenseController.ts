@@ -423,7 +423,45 @@ export const getExpenses = async (req: Request, res: Response, next: NextFunctio
     if (account_id) {
       query = query.where('expenses.account_id', account_id);
     }
+    if (tag_id) {
+      query = query.whereExists(function () {
+        this.select('*')
+          .from('expense_tags')
+          .whereRaw('expense_tags.expense_id = expenses.id')
+          .where('expense_tags.tag_id', tag_id);
+      });
+    }
 
+    // Get total count for pagination
+    let countQuery = db('expenses')
+      .count('* as count')
+      .where('expenses.user_id', userId)
+      .whereNull('expenses.deleted_at');
+
+    if (start_date) {
+      countQuery = countQuery.where('expenses.expense_date', '>=', start_date);
+    }
+    if (end_date) {
+      countQuery = countQuery.where('expenses.expense_date', '<=', end_date);
+    }
+    if (category_id) {
+      countQuery = countQuery.where('expenses.category_id', category_id);
+    }
+    if (account_id) {
+      countQuery = countQuery.where('expenses.account_id', account_id);
+    }
+    if (tag_id) {
+      countQuery = countQuery.whereExists(function () {
+        this.select('*')
+          .from('expense_tags')
+          .whereRaw('expense_tags.expense_id = expenses.id')
+          .where('expense_tags.tag_id', tag_id);
+      });
+    }
+
+    const [{ count }] = await countQuery;
+
+    console.log('expenses query:', query.toSQL());
     const expenses = await query
       .orderBy('expenses.expense_date', 'desc')
       .limit(Number(limit))
@@ -437,7 +475,7 @@ export const getExpenses = async (req: Request, res: Response, next: NextFunctio
       })
     );
 
-    res.json({ expenses: expensesWithTags });
+    res.json({ expenses: expensesWithTags, total: Number(count) });
   } catch (error) {
     handleError(next, error);
   }
@@ -512,8 +550,8 @@ export const updateExpense = async (req: Request, res: Response, next: NextFunct
         .where('id', expense.account_id)
         .increment('balance', expense.amount);
     } else if (account.type === 'credit_card') {
-      await db('accounts')
-        .where('id', expense.account_id)
+      await db('account_details')
+        .where('account_id', expense.account_id)
         .increment('available_credit', expense.amount);
     } else if (account.type === 'loan') {
       // Revert loan balance
@@ -715,8 +753,8 @@ export const getExpenseSummary = async (req: Request, res: Response, next: NextF
     // Get category breakdown (excluding credit card bill payments)
     const byCategory = await db('expenses')
       .select(
-        'categories.name as category',
-        db.raw('COALESCE(SUM(expenses.amount), 0) as total')
+        db.raw('COALESCE(categories.name, \'Uncategorized\') as category'),
+        db.raw('COALESCE(SUM(expenses.amount), 0)::decimal as total')
       )
       .leftJoin('categories', 'expenses.category_id', 'categories.id')
       .where('expenses.user_id', userId)
@@ -730,10 +768,13 @@ export const getExpenseSummary = async (req: Request, res: Response, next: NextF
 
     res.json({
       summary: {
-        total_count: summary.total_count,
-        total_amount: summary.total_amount,
+        total_count: Number(summary.total_count),
+        total_amount: Number(summary.total_amount),
       },
-      by_category: byCategory,
+      by_category: byCategory.map(item => ({
+        category: item.category,
+        total: Number(item.total),
+      })),
     });
   } catch (error) {
     handleError(next, error);
