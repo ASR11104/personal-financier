@@ -3,6 +3,7 @@ import authRoutes from './authRoutes';
 import accountRoutes from './accountRoutes';
 import expenseRoutes from './expenseRoutes';
 import incomeRoutes from './incomeRoutes';
+import investmentRoutes from './investmentRoutes';
 import categoryRoutes from './categoryRoutes';
 import analyticsRoutes from './analyticsRoutes';
 
@@ -12,6 +13,7 @@ router.use('/auth', authRoutes);
 router.use('/accounts', accountRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/incomes', incomeRoutes);
+router.use('/investments', investmentRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/analytics', analyticsRoutes);
 

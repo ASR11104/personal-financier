@@ -8,7 +8,7 @@ export function AddAccount() {
   const { data: profileData } = useProfile();
   const [formData, setFormData] = useState({
     name: '',
-    type: '' as 'checking' | 'savings' | 'credit_card' | 'cash' | 'investment' | 'loan' | '',
+    type: '' as 'checking' | 'savings' | 'credit_card' | 'cash' | 'loan' | '',
     currency: profileData?.user.default_currency || 'USD',
     institution_name: '',
     balance: '',
@@ -53,7 +53,7 @@ export function AddAccount() {
     try {
       await createAccount.mutateAsync({
         name: formData.name,
-        type: formData.type as 'checking' | 'savings' | 'credit_card' | 'cash' | 'investment' | 'loan',
+        type: formData.type as 'checking' | 'savings' | 'credit_card' | 'cash' | 'loan',
         currency: formData.currency,
         institution_name: formData.institution_name || undefined,
         balance: formData.balance ? Number(formData.balance) : undefined,
@@ -71,7 +71,6 @@ export function AddAccount() {
     { value: 'savings', label: 'Savings Account' },
     { value: 'credit_card', label: 'Credit Card' },
     { value: 'cash', label: 'Cash' },
-    { value: 'investment', label: 'Investment' },
     { value: 'loan', label: 'Loan' },
   ];
 

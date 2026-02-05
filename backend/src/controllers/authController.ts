@@ -9,7 +9,8 @@ const handleError = (next: NextFunction, error: unknown): void => {
   if (error instanceof AppError) {
     next(error);
   } else {
-    next(new AppError('An error occurred', 500));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    next(new AppError(errorMessage || 'An error occurred', 500));
   }
 };
 

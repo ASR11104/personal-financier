@@ -64,4 +64,19 @@ router.get(
   analyticsController.getIncomeByTags
 );
 
+// Investment overview
+router.get('/investments/overview', analyticsController.getInvestmentOverview);
+
+// Investment trends
+router.get(
+  '/investments/trends',
+  [
+    query('months').optional().isInt({ min: 1, max: 60 }),
+  ],
+  analyticsController.getInvestmentTrends
+);
+
+// Investment performance
+router.get('/investments/performance', analyticsController.getInvestmentPerformance);
+
 export default router;

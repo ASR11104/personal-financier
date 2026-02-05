@@ -39,6 +39,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'Incomes', href: '/incomes' },
     { name: 'Expenses', href: '/expenses' },
+    { name: 'Investments', href: '/investments' },
     { name: 'Accounts', href: '/accounts' },
     { name: 'Categories', href: '/categories' },
     { name: 'Analytics', href: '/analytics' },

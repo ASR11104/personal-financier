@@ -11,6 +11,9 @@ import {
   Incomes,
   AddIncome,
   EditIncome,
+  Investments,
+  AddInvestment,
+  EditInvestment,
   Accounts,
   AddAccount,
   EditAccount,
@@ -62,6 +65,9 @@ function App() {
             <Route path="/incomes" element={<Incomes />} />
             <Route path="/incomes/new" element={<AddIncome />} />
             <Route path="/incomes/:id/edit" element={<EditIncome />} />
+            <Route path="/investments" element={<Investments />} />
+            <Route path="/investments/add" element={<AddInvestment />} />
+            <Route path="/investments/:id" element={<EditInvestment />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/accounts/new" element={<AddAccount />} />
             <Route path="/accounts/:id/edit" element={<EditAccount />} />

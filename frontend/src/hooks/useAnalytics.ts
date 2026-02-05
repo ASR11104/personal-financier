@@ -49,3 +49,24 @@ export const useIncomeByTags = (months: number = 12) => {
     queryFn: () => analyticsApi.getIncomeByTags(months),
   });
 };
+
+export const useInvestmentOverview = () => {
+  return useQuery({
+    queryKey: ['investmentOverview'],
+    queryFn: () => analyticsApi.getInvestmentOverview(),
+  });
+};
+
+export const useInvestmentTrends = (months: number = 12) => {
+  return useQuery({
+    queryKey: ['investmentTrends', months],
+    queryFn: () => analyticsApi.getInvestmentTrends(months),
+  });
+};
+
+export const useInvestmentPerformance = () => {
+  return useQuery({
+    queryKey: ['investmentPerformance'],
+    queryFn: () => analyticsApi.getInvestmentPerformance(),
+  });
+};

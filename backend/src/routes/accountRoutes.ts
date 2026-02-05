@@ -18,7 +18,7 @@ router.post(
   [
     body('name').trim().notEmpty().isLength({ max: 200 }),
     body('type')
-      .isIn(['checking', 'savings', 'credit_card', 'cash', 'investment', 'loan']),
+      .isIn(['checking', 'savings', 'credit_card', 'cash', 'loan']),
     body('currency').isLength({ min: 3, max: 3 }),
     body('institution_name').optional().trim().isLength({ max: 100 }),
     body('balance').optional().isFloat({ min: 0 }),
@@ -32,7 +32,7 @@ router.put(
     body('name').optional().trim().notEmpty().isLength({ max: 200 }),
     body('type')
       .optional()
-      .isIn(['checking', 'savings', 'credit_card', 'cash', 'investment', 'loan']),
+      .isIn(['checking', 'savings', 'credit_card', 'cash', 'loan']),
     body('currency').optional().isLength({ min: 3, max: 3 }),
     body('institution_name').optional().trim().isLength({ max: 100 }),
     body('balance').optional().isFloat({ min: 0 }),

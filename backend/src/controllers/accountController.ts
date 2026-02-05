@@ -3,12 +3,11 @@ import { db } from '../database/connection';
 import { AppError } from '../middleware/errorHandler';
 
 const handleError = (next: NextFunction, error: unknown): void => {
-  console.log('Error occurred:', error);
-
   if (error instanceof AppError) {
     next(error);
   } else {
-    next(new AppError('An error occurred', 500));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    next(new AppError(errorMessage || 'An error occurred', 500));
   }
 };
 

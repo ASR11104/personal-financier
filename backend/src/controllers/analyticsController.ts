@@ -6,7 +6,8 @@ const handleError = (next: NextFunction, error: unknown): void => {
   if (error instanceof AppError) {
     next(error);
   } else {
-    next(new AppError('An error occurred', 500));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    next(new AppError(errorMessage || 'An error occurred', 500));
   }
 };
 
@@ -19,21 +20,26 @@ export const getMonthlyExpenseTrends = async (req: Request, res: Response, next:
 
     const limitMonths = Number(months);
 
-    // Get expenses grouped by month
+    // Get expenses grouped by month (excluding credit card bill payments)
     const monthlyExpenses = await db('expenses')
       .select(
         db.raw("TO_CHAR(expense_date, 'YYYY-MM') as month"),
-        db.raw('COALESCE(SUM(amount), 0) as total'),
+        db.raw('COALESCE(SUM(expenses.amount), 0) as total'),
         db.raw('COUNT(*) as count')
       )
-      .where('user_id', userId)
-      .whereNull('deleted_at')
-      .andWhere('expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .leftJoin('categories', 'expenses.category_id', 'categories.id')
+      .where('expenses.user_id', userId)
+      .whereNull('expenses.deleted_at')
+      .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy(db.raw("TO_CHAR(expense_date, 'YYYY-MM')"))
       .orderBy('month', 'asc')
       .limit(limitMonths);
 
-    // Get category breakdown for the period
+    // Get category breakdown for the period (excluding credit card bill payments)
     const byCategory = await db('expenses')
       .select(
         'categories.name as category',
@@ -43,6 +49,10 @@ export const getMonthlyExpenseTrends = async (req: Request, res: Response, next:
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
       .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy('categories.name')
       .orderBy('total', 'desc');
 
@@ -120,15 +130,20 @@ export const getIncomeVsExpense = async (req: Request, res: Response, next: Next
       .andWhere('income_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
       .groupBy(db.raw("TO_CHAR(income_date, 'YYYY-MM')"));
 
-    // Get monthly expenses
+    // Get monthly expenses (excluding credit card bill payments)
     const monthlyExpenses = await db('expenses')
       .select(
         db.raw("TO_CHAR(expense_date, 'YYYY-MM') as month"),
-        db.raw('COALESCE(SUM(amount), 0) as total')
+        db.raw('COALESCE(SUM(expenses.amount), 0) as total')
       )
-      .where('user_id', userId)
-      .whereNull('deleted_at')
-      .andWhere('expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .leftJoin('categories', 'expenses.category_id', 'categories.id')
+      .where('expenses.user_id', userId)
+      .whereNull('expenses.deleted_at')
+      .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy(db.raw("TO_CHAR(expense_date, 'YYYY-MM')"));
 
     // Merge the results
@@ -282,21 +297,27 @@ export const getSpendingByDayOfWeek = async (req: Request, res: Response, next: 
 
     const limitMonths = Number(months);
 
+    // Get spending by day (excluding credit card bill payments)
     const spendingByDay = await db('expenses')
       .select(
         db.raw("TO_CHAR(expense_date, 'DY') as day_name"),
         db.raw('EXTRACT(DOW FROM expense_date) as day_of_week'),
-        db.raw('COALESCE(SUM(amount), 0) as total'),
+        db.raw('COALESCE(SUM(expenses.amount), 0) as total'),
         db.raw('COUNT(*) as count')
       )
-      .where('user_id', userId)
-      .whereNull('deleted_at')
-      .andWhere('expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .leftJoin('categories', 'expenses.category_id', 'categories.id')
+      .where('expenses.user_id', userId)
+      .whereNull('expenses.deleted_at')
+      .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy(db.raw("TO_CHAR(expense_date, 'DY')"))
       .groupBy(db.raw('EXTRACT(DOW FROM expense_date)'))
       .orderBy('day_of_week', 'asc');
 
-    // Get category breakdown by day
+    // Get category breakdown by day (excluding credit card bill payments)
     const categoryByDay = await db('expenses')
       .select(
         'categories.name as category',
@@ -307,6 +328,10 @@ export const getSpendingByDayOfWeek = async (req: Request, res: Response, next: 
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
       .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy('categories.name')
       .groupBy(db.raw("TO_CHAR(expense_date, 'DY')"))
       .orderBy('category', 'asc')
@@ -330,53 +355,69 @@ export const getSpendingByTags = async (req: Request, res: Response, next: NextF
 
     const limitMonths = Number(months);
 
-    // Get total spending by tags
-    const spendingByTags = await db('expenses')
+    // Get total spending by tags (excluding credit card bill payments)
+    const spendingByTagsQuery = db('expenses')
       .select(
         'tags.id as tag_id',
-        'tags.name as tag_name',
-        'tags.color as tag_color',
+        db.raw("COALESCE(tags.name, 'Untagged') as tag_name"),
+        db.raw("COALESCE(tags.color, '#9CA3AF') as tag_color"),
         db.raw('COALESCE(SUM(expenses.amount), 0) as total'),
         db.raw('COUNT(DISTINCT expenses.id) as count')
       )
       .leftJoin('expense_tags', 'expenses.id', 'expense_tags.expense_id')
       .leftJoin('tags', 'expense_tags.tag_id', 'tags.id')
+      .leftJoin('categories', 'expenses.category_id', 'categories.id')
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
       .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy('tags.id')
       .groupBy('tags.name')
       .groupBy('tags.color')
       .orderBy('total', 'desc');
+    
+    console.log('Spending by tags query:', spendingByTagsQuery.toSQL());
+    const spendingByTags = await spendingByTagsQuery;
 
-    // Get monthly trends by tags
-    const monthlyByTags = await db('expenses')
+    // Get monthly trends by tags (excluding credit card bill payments)
+    const monthlyByTagsQuery = db('expenses')
       .select(
         db.raw("TO_CHAR(expense_date, 'YYYY-MM') as month"),
         'tags.id as tag_id',
-        'tags.name as tag_name',
-        'tags.color as tag_color',
+        db.raw("COALESCE(tags.name, 'Untagged') as tag_name"),
+        db.raw("COALESCE(tags.color, '#9CA3AF') as tag_color"),
         db.raw('COALESCE(SUM(expenses.amount), 0) as total')
       )
       .leftJoin('expense_tags', 'expenses.id', 'expense_tags.expense_id')
       .leftJoin('tags', 'expense_tags.tag_id', 'tags.id')
+      .leftJoin('categories', 'expenses.category_id', 'categories.id')
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
       .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy(db.raw("TO_CHAR(expense_date, 'YYYY-MM')"))
       .groupBy('tags.id')
       .groupBy('tags.name')
       .groupBy('tags.color')
       .orderBy('month', 'asc')
       .orderBy('total', 'desc');
+    
+    console.log('Monthly by tags query:', monthlyByTagsQuery.toSQL());
+    const monthlyByTags = await monthlyByTagsQuery;
 
-    // Get category breakdown by tags
-    const categoryByTags = await db('expenses')
+    // Get category breakdown by tags (excluding credit card bill payments)
+    const categoryByTagsQuery = db('expenses')
       .select(
         'categories.name as category',
         'tags.id as tag_id',
-        'tags.name as tag_name',
-        'tags.color as tag_color',
+        db.raw("COALESCE(tags.name, 'Untagged') as tag_name"),
+        db.raw("COALESCE(tags.color, '#9CA3AF') as tag_color"),
         db.raw('COALESCE(SUM(expenses.amount), 0) as total')
       )
       .leftJoin('categories', 'expenses.category_id', 'categories.id')
@@ -385,12 +426,19 @@ export const getSpendingByTags = async (req: Request, res: Response, next: NextF
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
       .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy('categories.name')
       .groupBy('tags.id')
       .groupBy('tags.name')
       .groupBy('tags.color')
       .orderBy('category', 'asc')
       .orderBy('total', 'desc');
+    
+    console.log('Category by tags query:', categoryByTagsQuery.toSQL());
+    const categoryByTags = await categoryByTagsQuery;
 
     res.json({
       by_tags: spendingByTags,
@@ -455,6 +503,236 @@ export const getIncomeByTags = async (req: Request, res: Response, next: NextFun
       by_tags: incomeByTags,
       monthly_by_tags: monthlyByTags,
     });
+  } catch (error) {
+    handleError(next, error);
+  }
+};
+
+// Get investment overview
+export const getInvestmentOverview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.user?.id;
+
+    // Get all investments
+    const investments = await db('investments')
+      .select(
+        'investments.*',
+        'investment_types.name as investment_type_name',
+        'accounts.name as account_name'
+      )
+      .leftJoin('investment_types', 'investments.investment_type_id', 'investment_types.id')
+      .leftJoin('accounts', 'investments.account_id', 'accounts.id')
+      .where('investments.user_id', userId)
+      .whereNull('investments.deleted_at');
+
+    // Calculate totals
+    const totalInvestments = investments.length;
+    const totalInvested = investments.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+    const currentValue = investments.reduce((sum, inv) => {
+      const withdrawalAmount = Number(inv.withdrawal_amount || 0);
+      const currentAmount = Number(inv.amount || 0) - withdrawalAmount;
+      return sum + currentAmount;
+    }, 0);
+    
+    // Calculate returns
+    const totalReturns = currentValue - totalInvested;
+    const returnsPercentage = totalInvested > 0 ? (totalReturns / totalInvested) * 100 : 0;
+
+    // Breakdown by status
+    const byStatus = investments.reduce((acc: Record<string, { count: number; total_amount: number }>, inv: any) => {
+      const status = inv.status || 'active';
+      if (!acc[status]) {
+        acc[status] = { count: 0, total_amount: 0 };
+      }
+      acc[status].count++;
+      const withdrawalAmount = Number(inv.withdrawal_amount || 0);
+      const currentAmount = Number(inv.amount || 0) - withdrawalAmount;
+      acc[status].total_amount += currentAmount;
+      return acc;
+    }, {});
+
+    // Breakdown by type
+    const byType = investments.reduce((acc: Record<string, { count: number; total_amount: number; invested: number }>, inv: any) => {
+      const type = inv.investment_type_name || 'Unknown';
+      if (!acc[type]) {
+        acc[type] = { count: 0, total_amount: 0, invested: 0 };
+      }
+      acc[type].count++;
+      const withdrawalAmount = Number(inv.withdrawal_amount || 0);
+      const currentAmount = Number(inv.amount || 0) - withdrawalAmount;
+      acc[type].total_amount += currentAmount;
+      acc[type].invested += Number(inv.amount || 0);
+      return acc;
+    }, {});
+
+    // SIP summary
+    const sipInvestments = investments.filter((inv: any) => inv.is_sip);
+    const sipSummary = {
+      total_sips: sipInvestments.length,
+      total_sip_amount: sipInvestments.reduce((sum: number, inv: any) => sum + Number(inv.sip_amount || 0), 0),
+      total_installments: sipInvestments.reduce((sum: number, inv: any) => sum + Number(inv.sip_installments_completed || 0), 0),
+    };
+
+    res.json({
+      summary: {
+        total_investments: totalInvestments,
+        total_invested: totalInvested,
+        current_value: currentValue,
+        total_returns: totalReturns,
+        returns_percentage: returnsPercentage,
+      },
+      by_status: Object.entries(byStatus).map(([status, data]) => ({
+        status,
+        count: data.count,
+        total_amount: data.total_amount,
+      })),
+      by_type: Object.entries(byType).map(([type, data]) => ({
+        investment_type: type,
+        count: data.count,
+        current_value: data.total_amount,
+        invested: data.invested,
+      })),
+      sip_summary: sipSummary,
+    });
+  } catch (error) {
+    handleError(next, error);
+  }
+};
+
+// Get investment trends (monthly)
+export const getInvestmentTrends = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.user?.id;
+    const { months = 12 } = req.query;
+
+    const limitMonths = Number(months);
+
+    // Get monthly investment amounts
+    const monthlyInvestments = await db('investments')
+      .select(
+        db.raw("TO_CHAR(purchase_date, 'YYYY-MM') as month"),
+        db.raw('COALESCE(SUM(amount), 0) as total'),
+        db.raw('COUNT(*) as count')
+      )
+      .where('user_id', userId)
+      .whereNull('deleted_at')
+      .andWhere('purchase_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .groupBy(db.raw("TO_CHAR(purchase_date, 'YYYY-MM')"))
+      .orderBy('month', 'asc');
+
+    // Get investments by type per month
+    const byTypeMonthly = await db('investments')
+      .select(
+        db.raw("TO_CHAR(purchase_date, 'YYYY-MM') as month"),
+        'investment_types.name as investment_type',
+        db.raw('COALESCE(SUM(investments.amount), 0) as total'),
+        db.raw('COUNT(*) as count')
+      )
+      .leftJoin('investment_types', 'investments.investment_type_id', 'investment_types.id')
+      .where('investments.user_id', userId)
+      .whereNull('investments.deleted_at')
+      .andWhere('investments.purchase_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .groupBy(db.raw("TO_CHAR(purchase_date, 'YYYY-MM')"))
+      .groupBy('investment_types.name')
+      .orderBy('month', 'asc');
+
+    // Get SIP transactions per month
+    const sipTransactions = await db('sip_transactions')
+      .select(
+        db.raw("TO_CHAR(transaction_date, 'YYYY-MM') as month"),
+        db.raw('COALESCE(SUM(amount), 0) as total'),
+        db.raw('COUNT(*) as count')
+      )
+      .whereIn('investment_id', 
+        db('investments').select('id').where('user_id', userId).whereNull('deleted_at')
+      )
+      .andWhere('transaction_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .groupBy(db.raw("TO_CHAR(transaction_date, 'YYYY-MM')"))
+      .orderBy('month', 'asc');
+
+    res.json({
+      monthly_investments: monthlyInvestments,
+      by_type_monthly: byTypeMonthly,
+      sip_transactions: sipTransactions,
+    });
+  } catch (error) {
+    handleError(next, error);
+  }
+};
+
+// Get investment performance by type
+export const getInvestmentPerformance = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.user?.id;
+
+    // Get all investments with details
+    const investments = await db('investments')
+      .select(
+        'investments.*',
+        'investment_types.name as investment_type_name'
+      )
+      .leftJoin('investment_types', 'investments.investment_type_id', 'investment_types.id')
+      .where('investments.user_id', userId)
+      .whereNull('investments.deleted_at')
+      .orderBy('investment_type_name', 'asc')
+      .orderBy('purchase_date', 'desc');
+
+    // Calculate performance metrics by type
+    const performanceByType = investments.reduce((acc: Record<string, {
+      type: string;
+      count: number;
+      total_invested: number;
+      current_value: number;
+      investments: any[];
+    }>, inv: any) => {
+      const type = inv.investment_type_name || 'Unknown';
+      if (!acc[type]) {
+        acc[type] = {
+          type,
+          count: 0,
+          total_invested: 0,
+          current_value: 0,
+          investments: [],
+        };
+      }
+      const withdrawalAmount = Number(inv.withdrawal_amount || 0);
+      const currentAmount = Number(inv.amount || 0) - withdrawalAmount;
+      acc[type].count++;
+      acc[type].total_invested += Number(inv.amount || 0);
+      acc[type].current_value += currentAmount;
+      acc[type].investments.push({
+        id: inv.id,
+        name: inv.name,
+        invested: Number(inv.amount || 0),
+        current_value: currentAmount,
+        returns: currentAmount - Number(inv.amount || 0),
+        returns_percentage: Number(inv.amount) > 0 
+          ? ((currentAmount - Number(inv.amount)) / Number(inv.amount)) * 100 
+          : 0,
+        purchase_date: inv.purchase_date,
+        status: inv.status,
+      });
+      return acc;
+    }, {});
+
+    const performance = Object.values(performanceByType).map((item) => ({
+      type: item.type,
+      count: item.count,
+      total_invested: item.total_invested,
+      current_value: item.current_value,
+      total_returns: item.current_value - item.total_invested,
+      returns_percentage: item.total_invested > 0 
+        ? ((item.current_value - item.total_invested) / item.total_invested) * 100 
+        : 0,
+      top_performers: item.investments
+        .sort((a: any, b: any) => b.returns_percentage - a.returns_percentage)
+        .slice(0, 5),
+    }));
+
+    res.json({ performance });
   } catch (error) {
     handleError(next, error);
   }

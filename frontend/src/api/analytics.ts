@@ -126,6 +126,72 @@ export interface IncomeByTagsResponse {
   monthly_by_tags: MonthlyTagSpending[];
 }
 
+export interface InvestmentOverview {
+  summary: {
+    total_investments: number;
+    total_invested: number;
+    current_value: number;
+    total_returns: number;
+    returns_percentage: number;
+  };
+  by_status: {
+    status: string;
+    count: number;
+    total_amount: number;
+  }[];
+  by_type: {
+    investment_type: string;
+    count: number;
+    current_value: number;
+    invested: number;
+  }[];
+  sip_summary: {
+    total_sips: number;
+    total_sip_amount: number;
+    total_installments: number;
+  };
+}
+
+export interface InvestmentTrendData {
+  month: string;
+  total: number;
+  count?: number;
+}
+
+export interface InvestmentTrendsResponse {
+  monthly_investments: InvestmentTrendData[];
+  by_type_monthly: {
+    month: string;
+    investment_type: string;
+    total: number;
+    count: number;
+  }[];
+  sip_transactions: InvestmentTrendData[];
+}
+
+export interface InvestmentPerformance {
+  type: string;
+  count: number;
+  total_invested: number;
+  current_value: number;
+  total_returns: number;
+  returns_percentage: number;
+  top_performers: {
+    id: string;
+    name: string;
+    invested: number;
+    current_value: number;
+    returns: number;
+    returns_percentage: number;
+    purchase_date: string;
+    status: string;
+  }[];
+}
+
+export interface InvestmentPerformanceResponse {
+  performance: InvestmentPerformance[];
+}
+
 export const analyticsApi = {
   // Get monthly expense trends
   getExpenseTrends: async (months: number = 12): Promise<MonthlyTrendsResponse> => {
@@ -178,6 +244,26 @@ export const analyticsApi = {
     const response = await api.get<IncomeByTagsResponse>('/analytics/income-by-tags', {
       params: { months },
     });
+    return response.data;
+  },
+
+  // Get investment overview
+  getInvestmentOverview: async (): Promise<InvestmentOverview> => {
+    const response = await api.get<InvestmentOverview>('/analytics/investments/overview');
+    return response.data;
+  },
+
+  // Get investment trends
+  getInvestmentTrends: async (months: number = 12): Promise<InvestmentTrendsResponse> => {
+    const response = await api.get<InvestmentTrendsResponse>('/analytics/investments/trends', {
+      params: { months },
+    });
+    return response.data;
+  },
+
+  // Get investment performance
+  getInvestmentPerformance: async (): Promise<InvestmentPerformanceResponse> => {
+    const response = await api.get<InvestmentPerformanceResponse>('/analytics/investments/performance');
     return response.data;
   },
 };

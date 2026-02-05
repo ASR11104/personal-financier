@@ -6,7 +6,8 @@ const handleError = (next: NextFunction, error: unknown): void => {
   if (error instanceof AppError) {
     next(error);
   } else {
-    next(new AppError('An error occurred', 500));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    next(new AppError(errorMessage || 'An error occurred', 500));
   }
 };
 
@@ -686,24 +687,32 @@ export const getExpenseSummary = async (req: Request, res: Response, next: NextF
     const userId = authReq.user?.id;
     const { start_date, end_date } = req.query;
 
+    // Exclude credit card bill payments from total expenses
+    // Credit card bill payments are identified by having a credit_card_account_id
+    // (they represent repayment of credit card spending, not new expenses)
     let query = db('expenses')
       .select(
         db.raw('COUNT(*) as total_count'),
-        db.raw('COALESCE(SUM(amount), 0) as total_amount')
+        db.raw('COALESCE(SUM(expenses.amount), 0) as total_amount')
       )
-      .where('user_id', userId)
-      .whereNull('deleted_at');
+      .leftJoin('categories', 'expenses.category_id', 'categories.id')
+      .where('expenses.user_id', userId)
+      .whereNull('expenses.deleted_at')
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      });
 
     if (start_date) {
-      query = query.where('expense_date', '>=', start_date);
+      query = query.where('expenses.expense_date', '>=', start_date);
     }
     if (end_date) {
-      query = query.where('expense_date', '<=', end_date);
+      query = query.where('expenses.expense_date', '<=', end_date);
     }
 
     const summary = await query.first();
 
-    // Get category breakdown
+    // Get category breakdown (excluding credit card bill payments)
     const byCategory = await db('expenses')
       .select(
         'categories.name as category',
@@ -712,6 +721,10 @@ export const getExpenseSummary = async (req: Request, res: Response, next: NextF
       .leftJoin('categories', 'expenses.category_id', 'categories.id')
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
+      .whereNot(function() {
+        this.where('categories.name', 'Credit Card')
+          .whereNotNull('expenses.credit_card_account_id');
+      })
       .groupBy('categories.name')
       .orderBy('total', 'desc');
 

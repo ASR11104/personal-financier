@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useExpenseSummary, useIncomeSummary, useExpenseTrends, useIncomeVsExpense, useAccountAnalytics, useProfile, useSpendingByTags, useIncomeByTags } from '../hooks';
+import { useExpenseSummary, useIncomeSummary, useExpenseTrends, useIncomeVsExpense, useAccountAnalytics, useProfile, useSpendingByTags, useIncomeByTags, useInvestmentOverview, useInvestmentTrends, useInvestmentPerformance } from '../hooks';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '../components/ui';
 import { formatCurrency } from '../utils/format';
 import {
@@ -33,11 +33,14 @@ export function Analytics() {
   const { data: accountAnalytics, isLoading: accountLoading } = useAccountAnalytics();
   const { data: spendingByTags, isLoading: tagsLoading } = useSpendingByTags(months);
   const { data: incomeByTags, isLoading: incomeTagsLoading } = useIncomeByTags(months);
+  const { data: investmentOverview, isLoading: investmentOverviewLoading } = useInvestmentOverview();
+  const { data: investmentTrends, isLoading: investmentTrendsLoading } = useInvestmentTrends(months);
+  const { data: investmentPerformance, isLoading: investmentPerformanceLoading } = useInvestmentPerformance();
   const { data: profile } = useProfile();
 
   const currency = profile?.user?.default_currency || 'USD';
 
-  const isLoading = expenseLoading || incomeLoading || trendsLoading || comparisonLoading || accountLoading || tagsLoading || incomeTagsLoading;
+  const isLoading = expenseLoading || incomeLoading || trendsLoading || comparisonLoading || accountLoading || tagsLoading || incomeTagsLoading || investmentOverviewLoading || investmentTrendsLoading || investmentPerformanceLoading;
 
   // Calculate net worth and financial health
   const netWorth = accountAnalytics?.netWorth || 0;
@@ -114,6 +117,42 @@ export function Analytics() {
     });
     return colors;
   }, [spendingByTags]);
+
+  // Investment analytics data
+  const investmentSummary = investmentOverview?.summary;
+  const investmentByType = investmentOverview?.by_type || [];
+  const investmentByStatus = investmentOverview?.by_status || [];
+  const sipSummary = investmentOverview?.sip_summary;
+
+  // Format investment trends data
+  const investmentTrendData = useMemo(() => {
+    if (!investmentTrends?.monthly_investments) return [];
+    return investmentTrends.monthly_investments.map(item => ({
+      month: item.month,
+      amount: Number(item.total),
+    }));
+  }, [investmentTrends]);
+
+  // Format investment type distribution for pie chart
+  const investmentTypeData = useMemo(() => {
+    if (!investmentByType) return [];
+    return investmentByType.map((item, index) => ({
+      name: item.investment_type,
+      value: item.current_value,
+    }));
+  }, [investmentByType]);
+
+  // Format investment performance data
+  const investmentPerformanceData = useMemo(() => {
+    if (!investmentPerformance?.performance) return [];
+    return investmentPerformance.performance.map(item => ({
+      type: item.type,
+      invested: item.total_invested,
+      currentValue: item.current_value,
+      returns: item.total_returns,
+      returnsPercentage: item.returns_percentage,
+    }));
+  }, [investmentPerformance]);
 
   if (isLoading) {
     return (
@@ -712,6 +751,212 @@ export function Analytics() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Investment Analytics Section */}
+      {investmentOverview && (() => {
+        const hasInvestments = investmentSummary && investmentSummary.total_investments > 0;
+        
+        if (!hasInvestments) return null;
+        
+        return (
+          <>
+            {/* Investment Summary Cards */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Investment Analytics</h2>
+                <p className="text-gray-500 mt-1">Track your investment performance</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className={investmentSummary.returns_percentage >= 0 ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'}>
+                <CardContent className="pt-6">
+                  <div className="text-sm text-gray-500 mb-1">Total Investments</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(investmentSummary.total_invested, currency)}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {investmentSummary.total_investments} investments
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-sm text-gray-500 mb-1">Current Value</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {formatCurrency(investmentSummary.current_value, currency)}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Current worth
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className={investmentSummary.returns_percentage >= 0 ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'}>
+                <CardContent className="pt-6">
+                  <div className="text-sm text-gray-500 mb-1">Total Returns</div>
+                  <div className={`text-2xl font-bold ${investmentSummary.total_returns >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(investmentSummary.total_returns, currency)}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {investmentSummary.returns_percentage.toFixed(1)}% returns
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-sm text-gray-500 mb-1">SIP Summary</div>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {sipSummary?.total_sips || 0} SIPs
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {sipSummary?.total_installments || 0} installments
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Investment Trends Chart */}
+            {investmentTrendData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Monthly Investment Trends</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={investmentTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis tickFormatter={(value) => formatCurrency(value as number, currency)} />
+                        <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0, currency)} />
+                        <Legend />
+                        <Bar dataKey="amount" fill="#8B5CF6" name="Investments" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Investment Distribution and Performance */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Investment by Type */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Investment by Type</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {investmentByType && investmentByType.length > 0 ? (
+                    <div className="space-y-3">
+                      {investmentByType.map((item, index) => {
+                        const percentage = investmentSummary.total_invested > 0
+                          ? (item.invested / investmentSummary.total_invested) * 100
+                          : 0;
+                        return (
+                          <div key={item.investment_type || index}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-gray-700 flex items-center gap-2">
+                                <span
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                />
+                                {item.investment_type || 'Unknown'}
+                              </span>
+                              <span className="text-sm font-medium text-gray-900">
+                                {formatCurrency(item.invested, currency)} ({percentage.toFixed(1)}%)
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="h-2 rounded-full transition-all"
+                                style={{
+                                  width: `${Math.min(percentage, 100)}%`,
+                                  backgroundColor: COLORS[index % COLORS.length],
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No investment data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Investment Performance by Type */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance by Type</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {investmentPerformanceData && investmentPerformanceData.length > 0 ? (
+                    <div className="space-y-3">
+                      {investmentPerformanceData.map((item, index) => (
+                        <div key={item.type || index}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-700">{item.type || 'Unknown'}</span>
+                            <span className={`text-sm font-medium ${item.returnsPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {item.returnsPercentage >= 0 ? '+' : ''}{item.returnsPercentage.toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>Invested: {formatCurrency(item.invested, currency)}</span>
+                            <span>Current: {formatCurrency(item.currentValue, currency)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No performance data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Investment Type Pie Chart */}
+            {investmentTypeData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Investment Type Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={investmentTypeData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                        >
+                          {investmentTypeData.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number | undefined) => formatCurrency(value || 0, currency)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

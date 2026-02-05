@@ -39,7 +39,7 @@ export interface Account {
   id: string;
   user_id: string;
   name: string;
-  type: 'checking' | 'savings' | 'credit_card' | 'cash' | 'investment' | 'loan';
+  type: 'checking' | 'savings' | 'credit_card' | 'cash' | 'loan';
   currency: string;
   balance: number;
   institution_name?: string;
@@ -134,4 +134,53 @@ export interface IncomeSummary {
 export interface IncomeSummaryResponse {
   summary: IncomeSummary;
   by_category: Array<{ category: string; total: number }>;
+}
+
+export interface InvestmentType {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface Investment {
+  id: string;
+  user_id: string;
+  account_id: string;
+  investment_type_id: string;
+  name: string;
+  amount: number;
+  units?: string;
+  purchase_price?: number;
+  purchase_date: string;
+  description?: string;
+  status: 'active' | 'sold' | 'withdrawn';
+  withdrawal_amount?: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  investment_type_name?: string;
+  account_name?: string;
+  // SIP fields
+  is_sip?: boolean;
+  sip_amount?: number;
+  sip_frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  sip_start_date?: string;
+  sip_end_date?: string;
+  sip_day_of_month?: number;
+  sip_installments_completed?: number;
+  sip_total_installments?: number;
+  sip_transactions_count?: number;
+  // Current amount after partial withdrawals
+  current_amount?: number;
+}
+
+export interface InvestmentSummary {
+  total_count: number;
+  total_amount: number;
+}
+
+export interface InvestmentSummaryResponse {
+  summary: InvestmentSummary;
+  by_type: Array<{ investment_type: string; total: number; count: number }>;
+  by_status: Array<{ status: string; count: number; total: number }>;
 }

@@ -14,7 +14,7 @@ export interface AccountDetailsParams {
 
 export interface CreateAccountParams {
   name: string;
-  type: 'checking' | 'savings' | 'credit_card' | 'cash' | 'investment' | 'loan';
+  type: 'checking' | 'savings' | 'credit_card' | 'cash' | 'loan';
   currency: string;
   institution_name?: string;
   balance?: number;
@@ -23,7 +23,7 @@ export interface CreateAccountParams {
 
 export interface UpdateAccountParams {
   name?: string;
-  type?: 'checking' | 'savings' | 'credit_card' | 'cash' | 'investment' | 'loan';
+  type?: 'checking' | 'savings' | 'credit_card' | 'cash' | 'loan';
   currency?: string;
   institution_name?: string;
   is_active?: boolean;
