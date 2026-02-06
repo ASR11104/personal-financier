@@ -21,7 +21,10 @@ router.get(
   incomeController.getIncomes
 );
 
-router.get('/summary', incomeController.getIncomeSummary);
+router.get('/summary', [
+  query('start_date').optional().isDate(),
+  query('end_date').optional().isDate(),
+], incomeController.getIncomeSummary);
 
 router.get('/:id', incomeController.getIncomeById);
 

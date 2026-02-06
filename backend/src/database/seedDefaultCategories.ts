@@ -9,7 +9,12 @@ interface DefaultCategory {
 
 const defaultCategories: DefaultCategory[] = [
   {
-    name: 'Income',
+    name: 'Other Income',
+    type: 'income',
+    description: 'Other income',
+  },
+    {
+    name: 'Salary',
     type: 'income',
     description: 'Salary and other income',
   },

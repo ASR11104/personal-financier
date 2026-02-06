@@ -37,7 +37,7 @@ app.use(errorHandler);
 // Start server
 const PORT = config.port;
 
-app.listen(PORT, async () => {
+app.listen(PORT, '0.0.0.0', async () => {
   await seedDefaultCategories();
   await seedDefaultTags();
   console.log(`Server running on port ${PORT} in ${config.env} mode`);

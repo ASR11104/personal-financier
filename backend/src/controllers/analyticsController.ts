@@ -30,7 +30,7 @@ export const getMonthlyExpenseTrends = async (req: Request, res: Response, next:
       .leftJoin('categories', 'expenses.category_id', 'categories.id')
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
-      .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .andWhere('expenses.expense_date', '>=', db.raw(`date_trunc('month', CURRENT_DATE - INTERVAL '${limitMonths - 1} months')`))
       .whereNot(function() {
         this.where('categories.name', 'Credit Card')
           .whereNotNull('expenses.credit_card_account_id');
@@ -48,7 +48,7 @@ export const getMonthlyExpenseTrends = async (req: Request, res: Response, next:
       .leftJoin('categories', 'expenses.category_id', 'categories.id')
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
-      .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .andWhere('expenses.expense_date', '>=', db.raw(`date_trunc('month', CURRENT_DATE - INTERVAL '${limitMonths - 1} months')`))
       .whereNot(function() {
         this.where('categories.name', 'Credit Card')
           .whereNotNull('expenses.credit_card_account_id');
@@ -83,7 +83,7 @@ export const getMonthlyIncomeTrends = async (req: Request, res: Response, next: 
       )
       .where('user_id', userId)
       .whereNull('deleted_at')
-      .andWhere('income_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .andWhere('income_date', '>=', db.raw(`date_trunc('month', CURRENT_DATE - INTERVAL '${limitMonths - 1} months')`))
       .groupBy(db.raw("TO_CHAR(income_date, 'YYYY-MM')"))
       .orderBy('month', 'asc')
       .limit(limitMonths);
@@ -97,7 +97,7 @@ export const getMonthlyIncomeTrends = async (req: Request, res: Response, next: 
       .leftJoin('categories', 'incomes.category_id', 'categories.id')
       .where('incomes.user_id', userId)
       .whereNull('incomes.deleted_at')
-      .andWhere('incomes.income_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
+      .andWhere('incomes.income_date', '>=', db.raw(`date_trunc('month', CURRENT_DATE - INTERVAL '${limitMonths - 1} months')`))
       .groupBy('categories.name')
       .orderBy('total', 'desc');
 
@@ -115,23 +115,21 @@ export const getIncomeVsExpense = async (req: Request, res: Response, next: Next
   try {
     const authReq = req as any;
     const userId = authReq.user?.id;
-    const { months = 12 } = req.query;
+    const { months = 12, start_date, end_date } = req.query;
 
     const limitMonths = Number(months);
 
-    // Get monthly income
-    const monthlyIncomes = await db('incomes')
+    // Build income query with optional date filters
+    let incomeQuery = db('incomes')
       .select(
         db.raw("TO_CHAR(income_date, 'YYYY-MM') as month"),
         db.raw('COALESCE(SUM(amount), 0) as total')
       )
       .where('user_id', userId)
-      .whereNull('deleted_at')
-      .andWhere('income_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
-      .groupBy(db.raw("TO_CHAR(income_date, 'YYYY-MM')"));
+      .whereNull('deleted_at');
 
-    // Get monthly expenses (excluding credit card bill payments)
-    const monthlyExpenses = await db('expenses')
+    // Build expense query with optional date filters
+    let expenseQuery = db('expenses')
       .select(
         db.raw("TO_CHAR(expense_date, 'YYYY-MM') as month"),
         db.raw('COALESCE(SUM(expenses.amount), 0) as total')
@@ -139,12 +137,31 @@ export const getIncomeVsExpense = async (req: Request, res: Response, next: Next
       .leftJoin('categories', 'expenses.category_id', 'categories.id')
       .where('expenses.user_id', userId)
       .whereNull('expenses.deleted_at')
-      .andWhere('expenses.expense_date', '>=', db.raw(`CURRENT_DATE - INTERVAL '${limitMonths} months'`))
       .whereNot(function() {
         this.where('categories.name', 'Credit Card')
           .whereNotNull('expenses.credit_card_account_id');
-      })
-      .groupBy(db.raw("TO_CHAR(expense_date, 'YYYY-MM')"));
+      });
+
+    if (start_date) {
+      incomeQuery = incomeQuery.andWhere('income_date', '>=', start_date);
+      expenseQuery = expenseQuery.andWhere('expense_date', '>=', start_date);
+    } else {
+      // Use months-based filtering when no start_date provided
+      const startOfMonth = db.raw(`date_trunc('month', CURRENT_DATE - INTERVAL '${limitMonths - 1} months')`);
+      incomeQuery = incomeQuery.andWhere('income_date', '>=', startOfMonth);
+      expenseQuery = expenseQuery.andWhere('expense_date', '>=', startOfMonth);
+    }
+
+    if (end_date) {
+      incomeQuery = incomeQuery.andWhere('income_date', '<=', end_date);
+      expenseQuery = expenseQuery.andWhere('expense_date', '<=', end_date);
+    }
+
+    incomeQuery = incomeQuery.groupBy(db.raw("TO_CHAR(income_date, 'YYYY-MM')"));
+    expenseQuery = expenseQuery.groupBy(db.raw("TO_CHAR(expense_date, 'YYYY-MM')"));
+
+    const monthlyIncomes = await incomeQuery;
+    const monthlyExpenses = await expenseQuery;
 
     // Merge the results
     const incomeMap = new Map<string, number>(monthlyIncomes.map((i: any) => [i.month, Number(i.total)]));
@@ -214,17 +231,13 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
     const totalInvestmentValue = Number(investments?.total_value || 0);
 
     // Calculate totals
-    // Assets: checking + savings + cash + investment accounts (by balance) + investments
+    // Assets: checking + savings + cash + investment holdings value
     const checkingSavingsCash = accounts
       .filter(a => ['checking', 'savings', 'cash'].includes(a.type))
       .reduce((sum, a) => sum + Number(a.balance || 0), 0);
 
-    const investmentAccountBalance = accounts
-      .filter(a => a.type === 'investment')
-      .reduce((sum, a) => sum + Number(a.balance || 0), 0);
-
-    // Total Assets = checking/savings/cash balance + investment account balance + investment holdings value
-    const totalAssets = checkingSavingsCash + investmentAccountBalance + totalInvestmentValue;
+    // Total Assets = checking/savings/cash balance + investment holdings value
+    const totalAssets = checkingSavingsCash + totalInvestmentValue;
 
     // Liabilities: credit card balance (credit_limit - available_credit) + loan balance
     const creditCardBalance = accounts
@@ -269,6 +282,16 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
       return acc;
     }, {});
 
+    // Get individual asset accounts (excluding credit cards and loans)
+    const assetAccounts = accounts
+      .filter(a => !['credit_card', 'loan'].includes(a.type))
+      .map(a => ({
+        id: a.id,
+        name: a.name,
+        type: a.type,
+        balance: Number(a.balance || 0),
+      }));
+
     res.json({
       netWorth,
       totalAssets,
@@ -276,7 +299,6 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
       breakdown: {
         assets: {
           checking_savings_cash: checkingSavingsCash,
-          investment_accounts: investmentAccountBalance,
           investment_holdings: totalInvestmentValue,
         },
         liabilities: {
@@ -317,6 +339,7 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
         count: data.count,
         total_balance: data.total_balance,
       })),
+      accounts: assetAccounts,
     });
   } catch (error) {
     handleError(next, error);

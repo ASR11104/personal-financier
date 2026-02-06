@@ -751,7 +751,7 @@ export const getExpenseSummary = async (req: Request, res: Response, next: NextF
     const summary = await query.first();
 
     // Get category breakdown (excluding credit card bill payments)
-    const byCategory = await db('expenses')
+    let byCategoryQuery = db('expenses')
       .select(
         db.raw('COALESCE(categories.name, \'Uncategorized\') as category'),
         db.raw('COALESCE(SUM(expenses.amount), 0)::decimal as total')
@@ -765,6 +765,15 @@ export const getExpenseSummary = async (req: Request, res: Response, next: NextF
       })
       .groupBy('categories.name')
       .orderBy('total', 'desc');
+
+    if (start_date) {
+      byCategoryQuery = byCategoryQuery.where('expenses.expense_date', '>=', start_date);
+    }
+    if (end_date) {
+      byCategoryQuery = byCategoryQuery.where('expenses.expense_date', '<=', end_date);
+    }
+
+    const byCategory = await byCategoryQuery;
 
     res.json({
       summary: {

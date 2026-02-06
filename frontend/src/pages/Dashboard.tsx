@@ -49,12 +49,14 @@ export function Dashboard() {
     .filter(a => a.type === 'loan' && a.details?.loan_balance)
     .reduce((sum, a) => sum + Number(a.details?.loan_balance || 0), 0);
 
-  const balanceBreakdown = [
-    { name: 'Checking', value: Number(balances.checking) },
-    { name: 'Savings', value: Number(balances.savings) },
-    { name: 'Cash', value: Number(balances.cash) },
-    { name: 'Investment', value: Number(balances.investment) },
-  ].filter((item) => item.value !== 0);
+  const balanceBreakdown = accounts
+    .filter(a => !['credit_card', 'loan'].includes(a.type))
+    .map(a => ({
+      name: a.name,
+      value: Number(a.balance || 0),
+      type: a.type,
+    }))
+    .filter(item => item.value !== 0);
 
   return (
     <div className="space-y-6">
@@ -76,12 +78,12 @@ export function Dashboard() {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-gray-500 mb-1">Credit Limit</div>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency(totalCreditLimit, currency)}
+            <div className="text-sm text-gray-500 mb-1">Credit Limit Used</div>
+            <div className="text-3xl font-bold text-blue-600">
+              {formatCurrency(totalCreditLimit - totalAvailableCredit, currency)}
             </div>
-            <div className="text-sm text-gray-500 mt-1">
-              Available: {formatCurrency(totalAvailableCredit, currency)}
+            <div className="text-sm text-gray-500 mt-2">
+              <div>Available: {formatCurrency(totalAvailableCredit, currency)}</div>
             </div>
           </CardContent>
         </Card>

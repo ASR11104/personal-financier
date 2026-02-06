@@ -15,10 +15,10 @@ export const useIncomeTrends = (months: number = 12) => {
   });
 };
 
-export const useIncomeVsExpense = (months: number = 12) => {
+export const useIncomeVsExpense = (months: number = 12, startDate?: string, endDate?: string) => {
   return useQuery({
-    queryKey: ['incomeVsExpense', months],
-    queryFn: () => analyticsApi.getIncomeVsExpense(months),
+    queryKey: ['incomeVsExpense', months, startDate, endDate],
+    queryFn: () => analyticsApi.getIncomeVsExpense(months, startDate, endDate),
   });
 };
 

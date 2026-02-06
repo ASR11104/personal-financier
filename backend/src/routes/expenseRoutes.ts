@@ -21,7 +21,10 @@ router.get(
   expenseController.getExpenses
 );
 
-router.get('/summary', expenseController.getExpenseSummary);
+router.get('/summary', [
+  query('start_date').optional().isDate(),
+  query('end_date').optional().isDate(),
+], expenseController.getExpenseSummary);
 
 router.get('/:id', expenseController.getExpenseById);
 

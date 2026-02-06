@@ -80,6 +80,12 @@ export interface AccountAnalytics {
     count: number;
     total_balance: number;
   }>;
+  accounts: Array<{
+    id: string;
+    name: string;
+    type: string;
+    balance: number;
+  }>;
 }
 
 export interface MonthlyTrendsResponse {
@@ -221,9 +227,9 @@ export const analyticsApi = {
   },
 
   // Get income vs expense comparison
-  getIncomeVsExpense: async (months: number = 12): Promise<IncomeVsExpenseResponse> => {
+  getIncomeVsExpense: async (months: number = 12, startDate?: string, endDate?: string): Promise<IncomeVsExpenseResponse> => {
     const response = await api.get<IncomeVsExpenseResponse>('/analytics/income-vs-expense', {
-      params: { months },
+      params: { months, start_date: startDate, end_date: endDate },
     });
     return response.data;
   },

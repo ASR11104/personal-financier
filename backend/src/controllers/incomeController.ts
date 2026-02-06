@@ -326,7 +326,7 @@ export const getIncomeSummary = async (req: Request, res: Response, next: NextFu
     const summary = await query.first();
 
     // Get category breakdown
-    const byCategory = await db('incomes')
+    let byCategoryQuery = db('incomes')
       .select(
         'categories.name as category',
         db.raw('COALESCE(SUM(incomes.amount), 0) as total')
@@ -336,6 +336,15 @@ export const getIncomeSummary = async (req: Request, res: Response, next: NextFu
       .whereNull('incomes.deleted_at')
       .groupBy('categories.name')
       .orderBy('total', 'desc');
+
+    if (start_date) {
+      byCategoryQuery = byCategoryQuery.where('incomes.income_date', '>=', start_date);
+    }
+    if (end_date) {
+      byCategoryQuery = byCategoryQuery.where('incomes.income_date', '<=', end_date);
+    }
+
+    const byCategory = await byCategoryQuery;
 
     res.json({
       summary: {

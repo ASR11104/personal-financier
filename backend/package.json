@@ -7,13 +7,19 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "migrate": "knex migrate:latest",
-    "migrate:rollback": "knex migrate:rollback",
+    "migrate": "knex migrate:latest --env production",
+    "migrate:rollback": "knex migrate:rollback --env production",
     "migrate:make": "knex migrate:make",
     "seed": "knex seed:run",
     "test": "jest"
   },
-  "keywords": ["finance", "personal-finance", "api", "express", "typescript"],
+  "keywords": [
+    "finance",
+    "personal-finance",
+    "api",
+    "express",
+    "typescript"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {

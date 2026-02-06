@@ -23,13 +23,27 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function Analytics() {
-  const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
-  const months = period === 'week' ? 1 : period === 'month' ? 6 : 12;
+  const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'current_month'>('current_month');
+  const months = period === 'week' ? 1 : period === 'month' ? 6 : period === 'current_month' ? 1 : 12;
 
-  const { data: expenseSummary, isLoading: expenseLoading } = useExpenseSummary();
-  const { data: incomeSummary, isLoading: incomeLoading } = useIncomeSummary();
+  // Calculate current month date range
+  const currentMonthDateRange = useMemo(() => {
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return {
+      start_date: startDate.toISOString().split('T')[0],
+      end_date: endDate.toISOString().split('T')[0],
+    };
+  }, []);
+
+  // Only use date range filter for current month period
+  const dateRangeParams = period === 'current_month' ? currentMonthDateRange : undefined;
+
+  const { data: expenseSummary, isLoading: expenseLoading } = useExpenseSummary(dateRangeParams);
+  const { data: incomeSummary, isLoading: incomeLoading } = useIncomeSummary(dateRangeParams);
   const { data: expenseTrends, isLoading: trendsLoading } = useExpenseTrends(months);
-  const { data: incomeVsExpense, isLoading: comparisonLoading } = useIncomeVsExpense(months);
+  const { data: incomeVsExpense, isLoading: comparisonLoading } = useIncomeVsExpense(months, dateRangeParams?.start_date, dateRangeParams?.end_date);
   const { data: accountAnalytics, isLoading: accountLoading } = useAccountAnalytics();
   const { data: spendingByTags, isLoading: tagsLoading } = useSpendingByTags(months);
   const { data: incomeByTags, isLoading: incomeTagsLoading } = useIncomeByTags(months);
@@ -52,7 +66,6 @@ export function Analytics() {
   const breakdown = accountAnalytics?.breakdown || {
     assets: {
       checking_savings_cash: 0,
-      investment_accounts: 0,
       investment_holdings: 0,
     },
     liabilities: {
@@ -62,7 +75,6 @@ export function Analytics() {
   };
 
   const assetsCheckingSavingsCash = breakdown.assets?.checking_savings_cash || 0;
-  const assetsInvestmentAccounts = breakdown.assets?.investment_accounts || 0;
   const assetsInvestmentHoldings = breakdown.assets?.investment_holdings || 0;
   const liabilitiesCreditCards = breakdown.liabilities?.credit_cards || 0;
   const liabilitiesLoans = breakdown.liabilities?.loans || 0;
@@ -87,20 +99,23 @@ export function Analytics() {
     }));
   }, [incomeVsExpense]);
 
-  // Format account type distribution for pie chart
+  // Format account distribution for pie chart (individual asset accounts, excluding liabilities)
   const accountDistributionData = useMemo(() => {
-    if (!accountAnalytics?.by_type) return [];
-    return accountAnalytics.by_type.map(item => ({
-      name: item.type.replace('_', ' '),
-      value: item.total_balance,
+    if (!accountAnalytics?.accounts) return [];
+    return accountAnalytics.accounts.map(item => ({
+      name: item.name,
+      value: item.balance,
+      type: item.type,
     }));
   }, [accountAnalytics]);
 
   // Calculate totals
   const totalExpenses = expenseSummary?.summary?.total_amount || 0;
   const totalIncomes = incomeSummary?.summary?.total_amount || 0;
-  const netSavings = incomeVsExpense?.summary?.net_savings || 0;
-  const savingsRate = incomeVsExpense?.summary?.overall_savings_rate || 0;
+  const netSavings = dateRangeParams ? totalIncomes - totalExpenses : (incomeVsExpense?.summary?.net_savings || 0);
+  const savingsRate = dateRangeParams 
+    ? (totalIncomes > 0 ? ((totalIncomes - totalExpenses) / totalIncomes) * 100 : 0)
+    : (incomeVsExpense?.summary?.overall_savings_rate || 0);
 
   // Category colors
   const getCategoryColor = (index: number) => COLORS[index % COLORS.length];
@@ -189,6 +204,13 @@ export function Analytics() {
         </div>
         <div className="flex gap-2">
           <Button
+            variant={period === 'current_month' ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setPeriod('current_month')}
+          >
+            This Month
+          </Button>
+          <Button
             variant={period === 'week' ? 'primary' : 'secondary'}
             size="sm"
             onClick={() => setPeriod('week')}
@@ -247,7 +269,7 @@ export function Analytics() {
             {/* Assets Breakdown */}
             <div className="mb-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Assets Breakdown</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="bg-green-50 rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -258,19 +280,6 @@ export function Analytics() {
                     <div>
                       <div className="text-xs text-gray-500">Checking/Savings/Cash</div>
                       <div className="font-semibold text-gray-900">{formatCurrency(assetsCheckingSavingsCash, currency)}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Investment Accounts</div>
-                      <div className="font-semibold text-gray-900">{formatCurrency(assetsInvestmentAccounts, currency)}</div>
                     </div>
                   </div>
                 </div>
