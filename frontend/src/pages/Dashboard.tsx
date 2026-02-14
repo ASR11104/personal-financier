@@ -2,6 +2,7 @@ import { useAccounts, useAccountBalance, useExpenseSummary, useExpenses, useProf
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui';
 import { formatCurrency, formatDate } from '../utils/format';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import type { Account } from '../types';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
@@ -35,6 +36,9 @@ export function Dashboard() {
 
   const accounts = accountsData?.accounts || [];
   const currency = profileData?.user.default_currency || 'USD';
+
+  // Filter credit cards
+  const creditCards = accounts.filter(a => a.type === 'credit_card');
 
   // Calculate totals
   const totalCreditLimit = accounts
@@ -185,6 +189,87 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Credit Cards Breakdown */}
+      {creditCards.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Credit Cards - Expected Bills</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {creditCards.map((card: Account) => {
+                const creditLimit = Number(card.details?.credit_limit || 0);
+                const availableCredit = Number(card.details?.available_credit || 0);
+                const expectedBill = creditLimit - availableCredit;
+                const utilizationPercent = creditLimit > 0 ? (expectedBill / creditLimit) * 100 : 0;
+
+                return (
+                  <div
+                    key={card.id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{card.name}</h3>
+                        {card.institution_name && (
+                          <p className="text-sm text-gray-500">{card.institution_name}</p>
+                        )}
+                      </div>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          utilizationPercent > 80
+                            ? 'bg-red-100 text-red-700'
+                            : utilizationPercent > 50
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {utilizationPercent.toFixed(0)}% used
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Expected Bill</span>
+                        <span className="font-bold text-blue-600">
+                          {formatCurrency(expectedBill, currency)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Available Credit</span>
+                        <span className="text-sm text-gray-700">
+                          {formatCurrency(availableCredit, currency)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Credit Limit</span>
+                        <span className="text-sm text-gray-700">
+                          {formatCurrency(creditLimit, currency)}
+                        </span>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="mt-3">
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              utilizationPercent > 80
+                                ? 'bg-red-500'
+                                : utilizationPercent > 50
+                                ? 'bg-yellow-500'
+                                : 'bg-blue-500'
+                            }`}
+                            style={{ width: `${Math.min(utilizationPercent, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Expenses */}
       <Card>

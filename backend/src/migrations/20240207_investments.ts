@@ -43,7 +43,6 @@ export async function up(knex: Knex): Promise<void> {
     table.check('amount > 0');
     table.check('is_sip = false OR (is_sip = true AND sip_amount IS NOT NULL)');
     table.check('is_sip = false OR (is_sip = true AND sip_frequency IS NOT NULL)');
-    table.check('frequency IN (\'daily\',\'weekly\',\'monthly\',\'yearly\')');
   });
 
   // Create SIP transactions table to track each SIP installment

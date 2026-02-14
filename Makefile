@@ -29,4 +29,4 @@ logs:
 clean:
 	-pkill -f "vite" || true
 	-pkill -f "ts-node-dev" || true
-	cd backend && docker-compose down -v
+	cd backend && docker-compose down 

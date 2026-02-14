@@ -41,6 +41,8 @@ export const TAG_COLOR_CONFIG: TagColorConfig[] = [
   { tag: 'wifi bill', color: COLORS.utilities },
   { tag: 'creditcard bill', color: COLORS.debt },
   { tag: 'debt', color: COLORS.debt },
+  { tag: 'existing bill', color: COLORS.debt },
+
 
   // Food & Groceries
   { tag: 'groceries', color: COLORS.food },
@@ -85,6 +87,9 @@ export const TAG_COLOR_CONFIG: TagColorConfig[] = [
 
   // Income
   { tag: 'salary', color: COLORS.income },
+  { tag: 'investment returns', color: COLORS.income },
+  { tag: 'debt repayment', color: COLORS.income },
+
 
   // Entertainment
   { tag: 'outings', color: COLORS.entertainment },
