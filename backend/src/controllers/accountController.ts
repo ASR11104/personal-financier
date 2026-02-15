@@ -20,6 +20,7 @@ interface AccountDetailsInput {
   loan_term_months?: number;
   loan_start_date?: string;
   loan_due_date?: string;
+  current_monthly_payment?: number;
 }
 
 interface AccountInput {
@@ -142,6 +143,7 @@ export const getAccounts = async (req: Request, res: Response, next: NextFunctio
         'account_details.loan_term_months',
         'account_details.loan_start_date',
         'account_details.loan_due_date',
+        'account_details.current_monthly_payment',
         'account_details.created_at as details_created_at',
         'account_details.updated_at as details_updated_at'
       )
@@ -171,6 +173,7 @@ export const getAccounts = async (req: Request, res: Response, next: NextFunctio
         loan_term_months: row.loan_term_months,
         loan_start_date: row.loan_start_date,
         loan_due_date: row.loan_due_date,
+        current_monthly_payment: row.current_monthly_payment,
         created_at: row.details_created_at,
         updated_at: row.details_updated_at,
       } : null;
@@ -180,7 +183,7 @@ export const getAccounts = async (req: Request, res: Response, next: NextFunctio
           existing.details = details;
         }
       } else {
-        const { details_id, credit_limit, available_credit, loan_amount, loan_balance, interest_rate, loan_term_months, loan_start_date, loan_due_date, details_created_at, details_updated_at, ...account } = row;
+        const { details_id, credit_limit, available_credit, loan_amount, loan_balance, interest_rate, loan_term_months, loan_start_date, loan_due_date, current_monthly_payment, details_created_at, details_updated_at, ...account } = row;
         acc.push(buildAccountResponse(account, details));
       }
       return acc;
@@ -219,6 +222,7 @@ export const getAccountById = async (req: Request, res: Response, next: NextFunc
         'account_details.loan_term_months',
         'account_details.loan_start_date',
         'account_details.loan_due_date',
+        'account_details.current_monthly_payment',
         'account_details.created_at as details_created_at',
         'account_details.updated_at as details_updated_at'
       )
@@ -231,7 +235,7 @@ export const getAccountById = async (req: Request, res: Response, next: NextFunc
       throw new AppError('Account not found', 404);
     }
 
-    const { details_id, credit_limit, available_credit, loan_amount, loan_balance, interest_rate, loan_term_months, loan_start_date, loan_due_date, details_created_at, details_updated_at, ...account } = result;
+    const { details_id, credit_limit, available_credit, loan_amount, loan_balance, interest_rate, loan_term_months, loan_start_date, loan_due_date, current_monthly_payment, details_created_at, details_updated_at, ...account } = result;
     
     const details = details_id ? {
       id: details_id,
@@ -244,6 +248,7 @@ export const getAccountById = async (req: Request, res: Response, next: NextFunc
       loan_term_months,
       loan_start_date,
       loan_due_date,
+      current_monthly_payment,
       created_at: details_created_at,
       updated_at: details_updated_at,
     } : null;

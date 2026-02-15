@@ -213,7 +213,8 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
         'account_details.available_credit',
         'account_details.loan_balance',
         'account_details.loan_amount',
-        'account_details.interest_rate'
+        'account_details.interest_rate',
+        'account_details.current_monthly_payment'
       )
       .leftJoin('account_details', 'accounts.id', 'account_details.account_id')
       .where('accounts.user_id', userId)
@@ -263,6 +264,53 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
     const loans = accounts.filter(a => a.type === 'loan');
     const totalLoanBalance = loans.reduce((sum, a) => sum + Number(a.loan_balance || a.balance || 0), 0);
     const totalLoanAmount = loans.reduce((sum, a) => sum + Number(a.loan_amount || a.balance || 0), 0);
+
+    // Calculate loan projections
+    const loanProjections = loans.map(l => {
+      const balance = Number(l.loan_balance || 0);
+      const interestRate = Number(l.interest_rate || 0) / 100 / 12; // Monthly interest rate
+      const monthlyPayment = Number(l.current_monthly_payment || 0);
+      
+      let monthsToPayoff = null;
+      let payoffDate = null;
+      let isPaidOff = false;
+
+      if (balance <= 0) {
+        isPaidOff = true;
+        monthsToPayoff = 0;
+      } else if (monthlyPayment > 0) {
+        if (interestRate > 0) {
+          // Calculate months with interest: n = -log(1 - (r * P / M)) / log(1 + r)
+          const r = interestRate;
+          const P = balance;
+          const M = monthlyPayment;
+          if (M > r * P) {
+            monthsToPayoff = Math.ceil(-Math.log(1 - (r * P) / M) / Math.log(1 + r));
+          }
+        } else {
+          // Simple division if no interest
+          monthsToPayoff = Math.ceil(balance / monthlyPayment);
+        }
+        
+        if (monthsToPayoff !== null && monthsToPayoff > 0) {
+          const now = new Date();
+          payoffDate = new Date(now.getFullYear(), now.getMonth() + monthsToPayoff, 1);
+        }
+      }
+
+      return {
+        id: l.id,
+        name: l.name,
+        balance: l.loan_balance,
+        loan_balance: l.loan_balance,
+        loan_amount: l.loan_amount,
+        interest_rate: l.interest_rate,
+        current_monthly_payment: l.current_monthly_payment,
+        months_to_payoff: monthsToPayoff,
+        payoff_date: payoffDate ? payoffDate.toISOString().split('T')[0] : null,
+        is_paid_off: isPaidOff,
+      };
+    });
 
     // Account breakdown by type
     const byType = accounts.reduce((acc: Record<string, { count: number; total_balance: number }>, account: any) => {
@@ -325,14 +373,7 @@ export const getAccountAnalytics = async (req: Request, res: Response, next: Nex
         total_balance: totalLoanBalance,
         total_original_amount: totalLoanAmount,
         count: loans.length,
-        accounts: loans.map(l => ({
-          id: l.id,
-          name: l.name,
-          balance: l.loan_balance, // Use loan_balance from account_details
-          loan_balance: l.loan_balance,
-          loan_amount: l.loan_amount,
-          interest_rate: l.interest_rate,
-        })),
+        accounts: loanProjections,
       },
       by_type: Object.entries(byType).map(([type, data]) => ({
         type,
@@ -791,6 +832,116 @@ export const getInvestmentPerformance = async (req: Request, res: Response, next
     }));
 
     res.json({ performance });
+  } catch (error) {
+    handleError(next, error);
+  }
+};
+
+// Get loan amortization schedule (principal vs interest per payment)
+export const getLoanAmortization = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.user?.id;
+    const { account_id } = req.query;
+
+    // Get all active loan accounts with details
+    let query = db('accounts')
+      .select(
+        'accounts.id',
+        'accounts.name',
+        'account_details.loan_balance',
+        'account_details.loan_amount',
+        'account_details.interest_rate',
+        'account_details.current_monthly_payment'
+      )
+      .leftJoin('account_details', 'accounts.id', 'account_details.account_id')
+      .where('accounts.user_id', userId)
+      .where('accounts.is_active', true)
+      .where('accounts.type', 'loan');
+
+    // Filter by specific account if provided
+    if (account_id) {
+      query = query.where('accounts.id', account_id);
+    }
+
+    const loans = await query;
+
+    // Calculate amortization schedule for each loan
+    const loanAmortizations = loans.map(loan => {
+      const loanAmount = Number(loan.loan_amount || loan.loan_balance || 0);
+      const balance = Number(loan.loan_balance || loanAmount);
+      const annualRate = Number(loan.interest_rate || 0);
+      const monthlyPayment = Number(loan.current_monthly_payment || 0);
+      
+      // Handle edge cases
+      if (loanAmount <= 0 || monthlyPayment <= 0) {
+        return {
+          id: loan.id,
+          name: loan.name,
+          loan_amount: loanAmount,
+          interest_rate: annualRate,
+          current_monthly_payment: monthlyPayment,
+          schedule: [],
+        };
+      }
+
+      const monthlyRate = annualRate / 100 / 12;
+      const schedule: Array<{
+        payment_number: number;
+        date: string;
+        payment: number;
+        principal: number;
+        interest: number;
+        balance: number;
+      }> = [];
+
+      let remainingBalance = balance;
+      let paymentNumber = 1;
+      const startDate = new Date();
+
+      // Generate amortization schedule until loan is paid off
+      while (remainingBalance > 0.01 && paymentNumber <= 600) { // Max 50 years to prevent infinite loop
+        const interestPayment = remainingBalance * monthlyRate;
+        let principalPayment = monthlyPayment - interestPayment;
+        
+        // Handle final payment
+        if (principalPayment > remainingBalance) {
+          principalPayment = remainingBalance;
+        }
+
+        const actualPayment = principalPayment + interestPayment;
+        remainingBalance = Math.max(0, remainingBalance - principalPayment);
+
+        // Calculate payment date
+        const paymentDate = new Date(startDate.getFullYear(), startDate.getMonth() + paymentNumber, 1);
+
+        schedule.push({
+          payment_number: paymentNumber,
+          date: paymentDate.toISOString().split('T')[0],
+          payment: Math.round(actualPayment * 100) / 100,
+          principal: Math.round(principalPayment * 100) / 100,
+          interest: Math.round(interestPayment * 100) / 100,
+          balance: Math.round(remainingBalance * 100) / 100,
+        });
+
+        paymentNumber++;
+
+        // Safety check
+        if (paymentNumber > 600) break;
+      }
+
+      return {
+        id: loan.id,
+        name: loan.name,
+        loan_amount: loanAmount,
+        interest_rate: annualRate,
+        current_monthly_payment: monthlyPayment,
+        total_interest: Math.round(schedule.reduce((sum, p) => sum + p.interest, 0) * 100) / 100,
+        schedule,
+      };
+    });
+
+    res.json({ loans: loanAmortizations });
   } catch (error) {
     handleError(next, error);
   }

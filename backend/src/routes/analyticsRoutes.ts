@@ -79,4 +79,7 @@ router.get(
 // Investment performance
 router.get('/investments/performance', analyticsController.getInvestmentPerformance);
 
+// Loan amortization schedule
+router.get('/loans/amortization', analyticsController.getLoanAmortization);
+
 export default router;

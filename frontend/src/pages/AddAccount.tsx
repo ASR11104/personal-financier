@@ -21,6 +21,7 @@ export function AddAccount() {
     loan_term_months: '',
     loan_start_date: '',
     loan_due_date: '',
+    current_monthly_payment: '',
   });
   const [error, setError] = useState('');
 
@@ -48,6 +49,7 @@ export function AddAccount() {
       if (formData.loan_term_months) details.loan_term_months = Number(formData.loan_term_months);
       if (formData.loan_start_date) details.loan_start_date = formData.loan_start_date;
       if (formData.loan_due_date) details.loan_due_date = formData.loan_due_date;
+      if (formData.current_monthly_payment) details.current_monthly_payment = Number(formData.current_monthly_payment);
     }
 
     try {
@@ -231,6 +233,18 @@ export function AddAccount() {
                   name="loan_due_date"
                   value={formData.loan_due_date}
                   onChange={handleChange}
+                />
+              </div>
+              <div className="mt-4">
+                <Input
+                  label="Current Monthly Payment"
+                  type="number"
+                  name="current_monthly_payment"
+                  value={formData.current_monthly_payment}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
                 />
               </div>
             </div>

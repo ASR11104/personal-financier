@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useExpenseSummary, useIncomeSummary, useExpenseTrends, useIncomeVsExpense, useAccountAnalytics, useProfile, useSpendingByTags, useIncomeByTags, useInvestmentOverview, useInvestmentTrends, useInvestmentPerformance } from '../hooks';
+import { useExpenseSummary, useIncomeSummary, useExpenseTrends, useIncomeVsExpense, useAccountAnalytics, useProfile, useSpendingByTags, useIncomeByTags, useInvestmentOverview, useInvestmentTrends, useInvestmentPerformance, useLoanAmortization } from '../hooks';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '../components/ui';
 import { formatCurrency } from '../utils/format';
 import {
@@ -25,6 +25,7 @@ const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export function Analytics() {
   const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'current_month'>('current_month');
   const months = period === 'week' ? 1 : period === 'month' ? 6 : period === 'current_month' ? 1 : 12;
+  const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
 
   // Calculate current month date range
   const currentMonthDateRange = useMemo(() => {
@@ -50,11 +51,12 @@ export function Analytics() {
   const { data: investmentOverview, isLoading: investmentOverviewLoading } = useInvestmentOverview();
   const { data: investmentTrends, isLoading: investmentTrendsLoading } = useInvestmentTrends(months);
   const { data: investmentPerformance, isLoading: investmentPerformanceLoading } = useInvestmentPerformance();
+  const { data: loanAmortization, isLoading: loanAmortizationLoading } = useLoanAmortization(selectedLoanId || undefined);
   const { data: profile } = useProfile();
 
   const currency = profile?.user?.default_currency || 'USD';
 
-  const isLoading = expenseLoading || incomeLoading || trendsLoading || comparisonLoading || accountLoading || tagsLoading || incomeTagsLoading || investmentOverviewLoading || investmentTrendsLoading || investmentPerformanceLoading;
+  const isLoading = expenseLoading || incomeLoading || trendsLoading || comparisonLoading || accountLoading || tagsLoading || incomeTagsLoading || investmentOverviewLoading || investmentTrendsLoading || investmentPerformanceLoading || loanAmortizationLoading;
 
   // Calculate net worth and financial health
   const netWorth = accountAnalytics?.netWorth || 0;
@@ -150,6 +152,23 @@ export function Analytics() {
     });
     return colors;
   }, [spendingByTags]);
+
+  // Format loan amortization data for chart
+  const loanAmortizationData = useMemo(() => {
+    if (!loanAmortization?.loans || loanAmortization.loans.length === 0) return [];
+    const loan = loanAmortization.loans[0];
+    if (!loan.schedule || loan.schedule.length === 0) return [];
+    return loan.schedule.map(payment => ({
+      paymentNumber: payment.payment_number,
+      date: payment.date,
+      principal: payment.principal,
+      interest: payment.interest,
+      balance: payment.balance,
+      payment: payment.payment,
+    }));
+  }, [loanAmortization]);
+
+  const selectedLoan = loanAmortization?.loans?.[0];
 
   // Investment analytics data
   const investmentSummary = investmentOverview?.summary;
@@ -602,61 +621,166 @@ export function Analytics() {
 
       {/* Loans Summary */}
       {accountAnalytics?.loans && accountAnalytics.loans.accounts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Loan Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b bg-gray-50">
-                    <th className="px-4 py-3 font-medium">Loan</th>
-                    <th className="px-4 py-3 font-medium text-right">Balance</th>
-                    <th className="px-4 py-3 font-medium text-right">Original Amount</th>
-                    <th className="px-4 py-3 font-medium text-right">Interest Rate</th>
-                    <th className="px-4 py-3 font-medium text-right">Paid Off</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accountAnalytics.loans.accounts.map((loan) => {
-                    const paidOff = loan.loan_amount > 0
-                      ? ((loan.loan_amount - loan.loan_balance) / loan.loan_amount) * 100
-                      : 0;
-                    return (
-                      <tr key={loan.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium">{loan.name}</td>
-                        <td className="px-4 py-3 text-sm text-right">{formatCurrency(loan.loan_balance, currency)}</td>
-                        <td className="px-4 py-3 text-sm text-right">{formatCurrency(loan.loan_amount, currency)}</td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          {loan.interest_rate ? `${loan.interest_rate}%` : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          <span className={`font-medium ${paidOff >= 50 ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {paidOff.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50">
-                    <td className="px-4 py-3 font-medium">Total</td>
-                    <td className="px-4 py-3 font-medium text-right">{formatCurrency(accountAnalytics.loans.total_balance, currency)}</td>
-                    <td className="px-4 py-3 font-medium text-right">{formatCurrency(accountAnalytics.loans.total_original_amount, currency)}</td>
-                    <td className="px-4 py-3 font-medium text-right">-</td>
-                    <td className="px-4 py-3 font-medium text-right">
-                      {accountAnalytics.loans.total_original_amount > 0
-                        ? (((accountAnalytics.loans.total_original_amount - accountAnalytics.loans.total_balance) / accountAnalytics.loans.total_original_amount) * 100).toFixed(1) + '%'
-                        : '0%'}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Loan Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-sm text-gray-500 border-b bg-gray-50">
+                      <th className="px-4 py-3 font-medium">Loan</th>
+                      <th className="px-4 py-3 font-medium text-right">Balance</th>
+                      <th className="px-4 py-3 font-medium text-right">Original Amount</th>
+                      <th className="px-4 py-3 font-medium text-right">Interest Rate</th>
+                      <th className="px-4 py-3 font-medium text-right">Monthly Payment</th>
+                      <th className="px-4 py-3 font-medium text-right">Payoff Date</th>
+                      <th className="px-4 py-3 font-medium text-right">Paid Off</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {accountAnalytics.loans.accounts.map((loan) => {
+                      const loanBalance = loan.loan_balance || 0;
+                      const loanAmount = loan.loan_amount || 0;
+                      const paidOff = loanAmount > 0
+                        ? ((loanAmount - loanBalance) / loanAmount) * 100
+                        : 0;
+                      return (
+                        <tr key={loan.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium">{loan.name}</td>
+                          <td className="px-4 py-3 text-sm text-right">{formatCurrency(loanBalance, currency)}</td>
+                          <td className="px-4 py-3 text-sm text-right">{formatCurrency(loanAmount, currency)}</td>
+                          <td className="px-4 py-3 text-sm text-right">
+                            {loan.interest_rate ? `${loan.interest_rate}%` : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right">
+                            {loan.current_monthly_payment ? formatCurrency(loan.current_monthly_payment, currency) : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right">
+                            {loan.payoff_date ? (
+                              <span className="text-blue-600 font-medium">
+                                {new Date(loan.payoff_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                              </span>
+                            ) : loan.is_paid_off ? (
+                              <span className="text-green-600 font-medium">Paid Off</span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right">
+                            <span className={`font-medium ${paidOff >= 50 ? 'text-green-600' : 'text-yellow-600'}`}>
+                              {paidOff.toFixed(1)}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-50">
+                      <td className="px-4 py-3 font-medium">Total</td>
+                      <td className="px-4 py-3 font-medium text-right">{formatCurrency(accountAnalytics.loans.total_balance, currency)}</td>
+                      <td className="px-4 py-3 font-medium text-right">{formatCurrency(accountAnalytics.loans.total_original_amount, currency)}</td>
+                      <td className="px-4 py-3 font-medium text-right">-</td>
+                      <td className="px-4 py-3 font-medium text-right">-</td>
+                      <td className="px-4 py-3 font-medium text-right">-</td>
+                      <td className="px-4 py-3 font-medium text-right">
+                        {accountAnalytics.loans.total_original_amount > 0
+                          ? (((accountAnalytics.loans.total_original_amount - accountAnalytics.loans.total_balance) / accountAnalytics.loans.total_original_amount) * 100).toFixed(1) + '%'
+                          : '0%'}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Loan Amortization Chart */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Loan Amortization Schedule</CardTitle>
+                <select
+                  className="px-3 py-2 border rounded-md text-sm"
+                  value={selectedLoanId || ''}
+                  onChange={(e) => setSelectedLoanId(e.target.value || null)}
+                >
+                  <option value="">Select a loan</option>
+                  {accountAnalytics.loans.accounts.map(loan => (
+                    <option key={loan.id} value={loan.id}>{loan.name}</option>
+                  ))}
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {selectedLoanId && loanAmortizationData.length > 0 ? (
+                <div>
+                  <div className="mb-4 text-sm text-gray-600">
+                    <span className="font-medium">{selectedLoan?.name}</span> - 
+                    Monthly Payment: {formatCurrency(selectedLoan?.current_monthly_payment || 0, currency)} | 
+                    Interest Rate: {selectedLoan?.interest_rate}% | 
+                    Total Interest: {formatCurrency(selectedLoan?.total_interest || 0, currency)}
+                  </div>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={loanAmortizationData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="paymentNumber" 
+                          label={{ value: 'Payment #', position: 'insideBottom', offset: -5 }}
+                        />
+                        <YAxis 
+                          tickFormatter={(value) => formatCurrency(value, currency)}
+                          label={{ value: 'Amount', angle: -90, position: 'insideLeft' }}
+                        />
+                        <Tooltip 
+                          formatter={(value: number | undefined) => formatCurrency(value || 0, currency)}
+                          labelFormatter={(label) => `Payment #${label}`}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="principal" 
+                          stroke="#10B981" 
+                          strokeWidth={2}
+                          name="Principal"
+                          dot={false}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="interest" 
+                          stroke="#EF4444" 
+                          strokeWidth={2}
+                          name="Interest"
+                          dot={false}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="balance" 
+                          stroke="#3B82F6" 
+                          strokeWidth={2}
+                          name="Remaining Balance"
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              ) : selectedLoanId ? (
+                <div className="text-center py-8 text-gray-500">
+                  No amortization data available for this loan
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Select a loan to view its amortization schedule
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Top Categories Table */}

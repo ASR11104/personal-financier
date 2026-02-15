@@ -70,3 +70,10 @@ export const useInvestmentPerformance = () => {
     queryFn: () => analyticsApi.getInvestmentPerformance(),
   });
 };
+
+export const useLoanAmortization = (accountId?: string) => {
+  return useQuery({
+    queryKey: ['loanAmortization', accountId],
+    queryFn: () => analyticsApi.getLoanAmortization(accountId),
+  });
+};

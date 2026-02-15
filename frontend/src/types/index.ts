@@ -33,6 +33,20 @@ export interface AccountDetails {
   loan_term_months?: number;
   loan_start_date?: string;
   loan_due_date?: string;
+  current_monthly_payment?: number;
+}
+
+export interface LoanProjection {
+  id: string;
+  name: string;
+  balance?: number;
+  loan_balance?: number;
+  loan_amount?: number;
+  interest_rate?: number;
+  current_monthly_payment?: number;
+  months_to_payoff?: number;
+  payoff_date?: string | null;
+  is_paid_off: boolean;
 }
 
 export interface Account {

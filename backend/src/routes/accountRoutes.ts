@@ -42,6 +42,7 @@ router.put(
     body('details.loan_amount').optional().isFloat({ min: 0 }),
     body('details.loan_balance').optional().isFloat({ min: 0 }),
     body('details.interest_rate').optional().isFloat({ min: 0 }),
+    body('details.current_monthly_payment').optional().isFloat({ min: 0 }),
   ],
   accountController.updateAccount
 );

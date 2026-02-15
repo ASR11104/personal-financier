@@ -36,4 +36,5 @@ export {
   useInvestmentOverview,
   useInvestmentTrends,
   useInvestmentPerformance,
+  useLoanAmortization,
 } from './useAnalytics';

@@ -24,6 +24,7 @@ export function EditAccount() {
     loan_term_months: '',
     loan_start_date: '',
     loan_due_date: '',
+    current_monthly_payment: '',
   });
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -46,6 +47,7 @@ export function EditAccount() {
         loan_term_months: account.details?.loan_term_months?.toString() || '',
         loan_start_date: account.details?.loan_start_date?.split('T')[0] || '',
         loan_due_date: account.details?.loan_due_date?.split('T')[0] || '',
+        current_monthly_payment: account.details?.current_monthly_payment?.toString() || '',
       }));
     }
   }, [data]);
@@ -76,6 +78,7 @@ export function EditAccount() {
       if (formData.loan_term_months) details.loan_term_months = Number(formData.loan_term_months);
       if (formData.loan_start_date) details.loan_start_date = formData.loan_start_date;
       if (formData.loan_due_date) details.loan_due_date = formData.loan_due_date;
+      if (formData.current_monthly_payment) details.current_monthly_payment = Number(formData.current_monthly_payment);
     }
 
     try {
@@ -278,6 +281,18 @@ export function EditAccount() {
                   name="loan_due_date"
                   value={formData.loan_due_date}
                   onChange={handleChange}
+                />
+              </div>
+              <div className="mt-4">
+                <Input
+                  label="Current Monthly Payment"
+                  type="number"
+                  name="current_monthly_payment"
+                  value={formData.current_monthly_payment}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
                 />
               </div>
             </div>

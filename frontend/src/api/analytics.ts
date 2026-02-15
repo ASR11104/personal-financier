@@ -69,10 +69,14 @@ export interface AccountAnalytics {
     accounts: Array<{
       id: string;
       name: string;
-      balance: number;
-      loan_balance: number;
-      loan_amount: number;
-      interest_rate: number | null;
+      balance?: number;
+      loan_balance?: number;
+      loan_amount?: number;
+      interest_rate?: number | null;
+      current_monthly_payment?: number;
+      months_to_payoff?: number | null;
+      payoff_date?: string | null;
+      is_paid_off: boolean;
     }>;
   };
   by_type: Array<{
@@ -209,6 +213,29 @@ export interface InvestmentPerformanceResponse {
   performance: InvestmentPerformance[];
 }
 
+export interface LoanAmortizationPayment {
+  payment_number: number;
+  date: string;
+  payment: number;
+  principal: number;
+  interest: number;
+  balance: number;
+}
+
+export interface LoanAmortization {
+  id: string;
+  name: string;
+  loan_amount: number;
+  interest_rate: number;
+  current_monthly_payment: number;
+  total_interest?: number;
+  schedule: LoanAmortizationPayment[];
+}
+
+export interface LoanAmortizationResponse {
+  loans: LoanAmortization[];
+}
+
 export const analyticsApi = {
   // Get monthly expense trends
   getExpenseTrends: async (months: number = 12): Promise<MonthlyTrendsResponse> => {
@@ -281,6 +308,14 @@ export const analyticsApi = {
   // Get investment performance
   getInvestmentPerformance: async (): Promise<InvestmentPerformanceResponse> => {
     const response = await api.get<InvestmentPerformanceResponse>('/analytics/investments/performance');
+    return response.data;
+  },
+
+  // Get loan amortization schedule
+  getLoanAmortization: async (accountId?: string): Promise<LoanAmortizationResponse> => {
+    const response = await api.get<LoanAmortizationResponse>('/analytics/loans/amortization', {
+      params: accountId ? { account_id: accountId } : {},
+    });
     return response.data;
   },
 };
