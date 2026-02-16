@@ -43,6 +43,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Accounts', href: '/accounts' },
     { name: 'Categories', href: '/categories' },
     { name: 'Analytics', href: '/analytics' },
+    { name: 'Financial Metrics', href: '/metrics' },
   ];
 
   const isActive = (href: string) => {
@@ -56,9 +57,8 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -74,11 +74,10 @@ export function Layout({ children }: LayoutProps) {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  isActive(item.href)
+                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive(item.href)
                     ? 'bg-blue-50 text-blue-700'
                     : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 {item.name}
               </Link>

@@ -38,3 +38,5 @@ export {
   useInvestmentPerformance,
   useLoanAmortization,
 } from './useAnalytics';
+export { useFinancialPreferences, useUpdateFinancialPreferences } from './useFinancialPreferences';
+export { useFinancialMetrics } from './useMetrics';

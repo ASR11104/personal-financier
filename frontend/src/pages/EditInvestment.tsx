@@ -20,6 +20,7 @@ interface FormData {
   sip_end_date: string;
   sip_day_of_month: string;
   sip_total_installments: string;
+  is_emergency_fund: boolean;
 }
 
 export function EditInvestment() {
@@ -54,6 +55,7 @@ export function EditInvestment() {
     sip_end_date: '',
     sip_day_of_month: '1',
     sip_total_installments: '',
+    is_emergency_fund: false,
   });
 
   useEffect(() => {
@@ -73,6 +75,7 @@ export function EditInvestment() {
         sip_end_date: investment.sip_end_date || '',
         sip_day_of_month: investment.sip_day_of_month?.toString() || '1',
         sip_total_installments: investment.sip_total_installments?.toString() || '',
+        is_emergency_fund: investment.is_emergency_fund || false,
       });
     }
   }, [investment]);
@@ -105,6 +108,7 @@ export function EditInvestment() {
         purchase_price: formData.purchase_price ? Number(formData.purchase_price) : undefined,
         purchase_date: formData.purchase_date,
         description: formData.description || undefined,
+        is_emergency_fund: formData.is_emergency_fund,
       };
 
       if (formData.is_sip) {
@@ -218,13 +222,12 @@ export function EditInvestment() {
             <p className="text-sm text-gray-600">
               <span className="font-medium">Status:</span>{' '}
               <span
-                className={`px-2 py-0.5 rounded text-xs font-medium ${
-                  investment.status === 'active'
+                className={`px-2 py-0.5 rounded text-xs font-medium ${investment.status === 'active'
                     ? 'bg-green-100 text-green-800'
                     : investment.status === 'withdrawn'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
               >
                 {investment.status}
               </span>
@@ -323,11 +326,30 @@ export function EditInvestment() {
             disabled={!isActive}
           />
 
+          {/* Emergency Fund Flag */}
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <div className="flex items-center mb-2">
+              <input
+                type="checkbox"
+                name="is_emergency_fund"
+                id="is_emergency_fund"
+                checked={formData.is_emergency_fund}
+                onChange={handleCheckboxChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                disabled={!isActive}
+              />
+              <label htmlFor="is_emergency_fund" className="ml-2 block text-sm font-medium text-gray-900">
+                Count as Emergency Fund
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 ml-6">This investment will be included in your emergency fund calculation on the Financial Metrics page.</p>
+          </div>
+
           {/* SIP Section */}
           {investment.is_sip && (
             <div className="border-t border-gray-200 pt-4 mt-4">
               <h4 className="font-medium text-gray-900 mb-4">SIP Details</h4>
-              
+
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <Input
                   label="SIP Amount"

@@ -5,3 +5,5 @@ export { accountApi, type CreateAccountParams, type UpdateAccountParams } from '
 export { categoryApi, type CreateCategoryParams, type UpdateCategoryParams, type CreateSubCategoryParams, type UpdateSubCategoryParams } from './category';
 export { analyticsApi, type MonthlyTrendData, type CategoryBreakdown, type IncomeVsExpenseComparison, type IncomeVsExpenseSummary, type SpendingByDay, type AccountAnalytics, type MonthlyTrendsResponse, type IncomeTrendsResponse, type IncomeVsExpenseResponse, type SpendingByDayResponse } from './analytics';
 export { api, getToken, setToken, removeToken, getRefreshToken, setRefreshToken, removeRefreshToken } from './client';
+export { financialPreferencesApi, type FinancialPreferencesData } from './financialPreferences';
+export { metricsApi } from './metrics';

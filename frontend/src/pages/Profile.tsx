@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProfile, useUpdateProfile } from '../hooks';
+import { useProfile, useUpdateProfile, useFinancialPreferences, useUpdateFinancialPreferences } from '../hooks';
 import { Button, Card, Input, Select, Alert, AlertDescription } from '../components/ui';
 
 const CURRENCY_OPTIONS = [
@@ -269,6 +269,148 @@ export function Profile() {
           </div>
         </form>
       </Card>
+
+      {/* Financial Planning Preferences */}
+      <FinancialPlanningSection />
     </div>
+  );
+}
+
+function FinancialPlanningSection() {
+  const { data: prefs, isLoading } = useFinancialPreferences();
+  const updatePrefs = useUpdateFinancialPreferences();
+  const [fpData, setFpData] = useState({
+    expected_retirement_age: '60',
+    monthly_retirement_expense: '',
+    expected_annual_return: '8',
+    expected_inflation_rate: '6',
+    life_expectancy: '80',
+  });
+  const [fpSuccess, setFpSuccess] = useState('');
+  const [fpError, setFpError] = useState('');
+
+  useEffect(() => {
+    const p = prefs?.preferences;
+    if (p) {
+      setFpData({
+        expected_retirement_age: p.expected_retirement_age?.toString() || '60',
+        monthly_retirement_expense: p.monthly_retirement_expense?.toString() || '',
+        expected_annual_return: p.expected_annual_return?.toString() || '8',
+        expected_inflation_rate: p.expected_inflation_rate?.toString() || '6',
+        life_expectancy: p.life_expectancy?.toString() || '80',
+      });
+    }
+  }, [prefs]);
+
+  const handleFpChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFpData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFpError('');
+    setFpSuccess('');
+    try {
+      await updatePrefs.mutateAsync({
+        expected_retirement_age: Number(fpData.expected_retirement_age),
+        monthly_retirement_expense: fpData.monthly_retirement_expense ? Number(fpData.monthly_retirement_expense) : null,
+        expected_annual_return: Number(fpData.expected_annual_return),
+        expected_inflation_rate: Number(fpData.expected_inflation_rate),
+        life_expectancy: Number(fpData.life_expectancy),
+      });
+      setFpSuccess('Financial planning preferences saved!');
+    } catch {
+      setFpError('Failed to save financial planning preferences.');
+    }
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <Card>
+      <form onSubmit={handleFpSubmit} className="space-y-4">
+        <div className="border-b pb-2 mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Financial Planning</h3>
+          <p className="text-sm text-gray-500">These preferences are used for retirement planning and metrics calculations.</p>
+        </div>
+
+        {fpError && (
+          <Alert variant="error"><AlertDescription>{fpError}</AlertDescription></Alert>
+        )}
+        {fpSuccess && (
+          <Alert variant="success"><AlertDescription>{fpSuccess}</AlertDescription></Alert>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Expected Retirement Age"
+            type="number"
+            name="expected_retirement_age"
+            value={fpData.expected_retirement_age}
+            onChange={handleFpChange}
+            placeholder="60"
+            min="30"
+            max="100"
+            required
+          />
+          <Input
+            label="Life Expectancy"
+            type="number"
+            name="life_expectancy"
+            value={fpData.life_expectancy}
+            onChange={handleFpChange}
+            placeholder="80"
+            min="50"
+            max="120"
+            required
+          />
+        </div>
+
+        <Input
+          label="Monthly Retirement Expense (Optional)"
+          type="number"
+          name="monthly_retirement_expense"
+          value={fpData.monthly_retirement_expense}
+          onChange={handleFpChange}
+          placeholder="Leave blank to use current monthly expense"
+          step="100"
+          min="0"
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Expected Annual Return (%)"
+            type="number"
+            name="expected_annual_return"
+            value={fpData.expected_annual_return}
+            onChange={handleFpChange}
+            placeholder="8"
+            step="0.5"
+            min="0"
+            max="30"
+            required
+          />
+          <Input
+            label="Expected Inflation Rate (%)"
+            type="number"
+            name="expected_inflation_rate"
+            value={fpData.expected_inflation_rate}
+            onChange={handleFpChange}
+            placeholder="6"
+            step="0.5"
+            min="0"
+            max="20"
+            required
+          />
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <Button type="submit" isLoading={updatePrefs.isPending}>
+            Save Preferences
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }

@@ -16,3 +16,4 @@ export { EditAccount } from './EditAccount';
 export { Analytics } from './Analytics';
 export { Categories } from './Categories';
 export { Profile } from './Profile';
+export { Metrics } from './Metrics';

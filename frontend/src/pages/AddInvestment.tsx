@@ -20,6 +20,7 @@ interface FormData {
   sip_day_of_month: string;
   sip_total_installments: string;
   is_existing: boolean;
+  is_emergency_fund: boolean;
 }
 
 export function AddInvestment() {
@@ -42,6 +43,7 @@ export function AddInvestment() {
     sip_day_of_month: '1',
     sip_total_installments: '',
     is_existing: false,
+    is_emergency_fund: false,
   });
   const [error, setError] = useState('');
 
@@ -82,6 +84,7 @@ export function AddInvestment() {
         name: formData.name,
         description: formData.description || undefined,
         is_existing: formData.is_existing,
+        is_emergency_fund: formData.is_emergency_fund,
       };
 
       // Only include account_id for new investments
@@ -264,6 +267,24 @@ export function AddInvestment() {
             )}
           </div>
 
+          {/* Emergency Fund Flag */}
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <div className="flex items-center mb-2">
+              <input
+                type="checkbox"
+                name="is_emergency_fund"
+                id="is_emergency_fund"
+                checked={formData.is_emergency_fund}
+                onChange={handleCheckboxChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="is_emergency_fund" className="ml-2 block text-sm font-medium text-gray-900">
+                Count as Emergency Fund
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 ml-6">This investment will be included in your emergency fund calculation on the Financial Metrics page.</p>
+          </div>
+
           {/* SIP Section */}
           <div className="border-t border-gray-200 pt-4 mt-4">
             <div className="flex items-center mb-4">
@@ -283,7 +304,7 @@ export function AddInvestment() {
             {formData.is_sip && (
               <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900">SIP Details</h4>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <Input
                     label="SIP Amount"

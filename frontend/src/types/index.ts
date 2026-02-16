@@ -186,6 +186,8 @@ export interface Investment {
   sip_transactions_count?: number;
   // Current amount after partial withdrawals
   current_amount?: number;
+  // Emergency fund flag
+  is_emergency_fund?: boolean;
 }
 
 export interface InvestmentSummary {
@@ -197,4 +199,124 @@ export interface InvestmentSummaryResponse {
   summary: InvestmentSummary;
   by_type: Array<{ investment_type: string; total: number; count: number }>;
   by_status: Array<{ status: string; count: number; total: number }>;
+}
+
+// Financial Preferences
+export interface FinancialPreferences {
+  id?: string;
+  user_id?: string;
+  expected_retirement_age: number;
+  monthly_retirement_expense: number | null;
+  expected_annual_return: number;
+  expected_inflation_rate: number;
+  life_expectancy: number;
+}
+
+// Financial Metrics
+export interface AdviceItem {
+  type: 'warning' | 'tip' | 'positive';
+  category: 'spending' | 'savings' | 'debt' | 'retirement' | 'investment' | 'emergency';
+  message: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface SpendingHabits {
+  total_expenses: number;
+  avg_daily_spend: number;
+  avg_monthly_spend: number;
+  highest_spending_day: { day: string; day_of_week: number; total: number } | null;
+  spending_by_day: Array<{ day: string; day_of_week: number; total: number }>;
+  weekend_spend: number;
+  weekday_spend: number;
+  weekend_vs_weekday_ratio: number;
+  top_categories: Array<{ category: string; total: number }>;
+  monthly_totals: Array<{ month: string; total: number }>;
+  mom_change: number | null;
+}
+
+export interface SavingsTracker {
+  current_savings_rate: number;
+  avg_savings_rate: number;
+  trend: 'improving' | 'declining' | 'stable';
+  total_income: number;
+  total_expenses: number;
+  total_savings: number;
+  avg_monthly_savings: number;
+  projected_annual_savings: number;
+  monthly_data: Array<{ month: string; income: number; expense: number; savings: number; savings_rate: number }>;
+}
+
+export interface RetirementPlanning {
+  configured: boolean;
+  current_age: number | null;
+  retirement_age: number;
+  life_expectancy?: number;
+  years_to_retirement: number;
+  years_in_retirement?: number;
+  expected_annual_return?: number;
+  expected_inflation_rate?: number;
+  monthly_retirement_expense?: number;
+  current_corpus: number;
+  required_corpus: number;
+  projected_corpus: number;
+  monthly_investment_needed: number;
+  retirement_readiness: number;
+  gap?: number;
+  message?: string;
+}
+
+export interface HealthScoreBreakdownItem {
+  score: number;
+  weight: number;
+  value: number;
+  target: number;
+}
+
+export interface FinancialHealthScore {
+  total_score: number;
+  grade: string;
+  breakdown: {
+    savings_rate: HealthScoreBreakdownItem;
+    debt_to_income: HealthScoreBreakdownItem;
+    emergency_fund: HealthScoreBreakdownItem;
+    credit_utilization: HealthScoreBreakdownItem;
+    investment_rate: HealthScoreBreakdownItem;
+  };
+}
+
+export interface EmergencyFund {
+  current_fund: number;
+  account_balance: number;
+  emergency_investments: number;
+  avg_monthly_expenses: number;
+  months_of_coverage: number;
+  target: number;
+  gap: number;
+  status: 'healthy' | 'building' | 'critical';
+}
+
+export interface DebtToIncome {
+  total_monthly_debt: number;
+  loan_payments: number;
+  credit_card_min_payments: number;
+  avg_monthly_income: number;
+  dti_ratio: number;
+  status: string;
+}
+
+export interface ExpenseForecast {
+  projected_next_month: number;
+  historical: Array<{ month: string; total: number }>;
+  category_projections: Array<{ category: string; avg_monthly: number; total: number }>;
+}
+
+export interface FinancialMetricsResponse {
+  spending_habits: SpendingHabits;
+  savings_tracker: SavingsTracker;
+  retirement_planning: RetirementPlanning;
+  financial_health_score: FinancialHealthScore;
+  emergency_fund: EmergencyFund;
+  debt_to_income: DebtToIncome;
+  expense_forecast: ExpenseForecast;
+  advice: AdviceItem[];
 }

@@ -20,6 +20,7 @@ import {
   Analytics,
   Categories,
   Profile,
+  Metrics,
 } from './pages';
 import { getToken } from './api';
 
@@ -72,6 +73,7 @@ function App() {
             <Route path="/accounts/new" element={<AddAccount />} />
             <Route path="/accounts/:id/edit" element={<EditAccount />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/metrics" element={<Metrics />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/profile" element={<Profile />} />
           </Route>

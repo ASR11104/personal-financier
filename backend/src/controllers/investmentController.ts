@@ -40,14 +40,14 @@ export const createInvestment = async (req: Request, res: Response, next: NextFu
   try {
     const authReq = req as any;
     const userId = authReq.user?.id;
-    const { 
-      account_id, 
-      investment_type_id, 
-      name, 
-      amount, 
-      units, 
-      purchase_price, 
-      purchase_date, 
+    const {
+      account_id,
+      investment_type_id,
+      name,
+      amount,
+      units,
+      purchase_price,
+      purchase_date,
       description,
       // SIP fields
       is_sip,
@@ -59,6 +59,8 @@ export const createInvestment = async (req: Request, res: Response, next: NextFu
       sip_total_installments,
       // Existing investment flag - skips account balance deduction
       is_existing,
+      // Emergency fund flag
+      is_emergency_fund,
     } = req.body;
 
     // Validate account exists and belongs to user (only required for new investments)
@@ -108,6 +110,8 @@ export const createInvestment = async (req: Request, res: Response, next: NextFu
         sip_end_date: sip_end_date || null,
         sip_day_of_month: sip_day_of_month || null,
         sip_total_installments: sip_total_installments || null,
+        // Emergency fund flag
+        is_emergency_fund: is_emergency_fund || false,
       })
       .returning('*');
 
@@ -152,8 +156,8 @@ const processSipTransaction = async (investmentId: string, transactionDate: stri
   if (!investment || !investment.is_sip) return;
 
   // Check if we've reached the total installments limit
-  if (investment.sip_total_installments && 
-      investment.sip_installments_completed >= investment.sip_total_installments) {
+  if (investment.sip_total_installments &&
+    investment.sip_installments_completed >= investment.sip_total_installments) {
     return;
   }
 
@@ -194,15 +198,15 @@ export const getInvestments = async (req: Request, res: Response, next: NextFunc
   try {
     const authReq = req as any;
     const userId = authReq.user?.id;
-    const { 
-      start_date, 
-      end_date, 
-      investment_type_id, 
-      account_id, 
+    const {
+      start_date,
+      end_date,
+      investment_type_id,
+      account_id,
       status,
       is_sip,
-      limit = 50, 
-      offset = 0 
+      limit = 50,
+      offset = 0
     } = req.query;
 
     let query = db('investments')
@@ -245,8 +249,8 @@ export const getInvestments = async (req: Request, res: Response, next: NextFunc
       investments.map(async (inv) => {
         const sipTransactions = await getSipTransactions(inv.id);
         const currentAmount = Number(inv.amount) - Number(inv.withdrawal_amount || 0);
-        return { 
-          ...inv, 
+        return {
+          ...inv,
           sip_transactions_count: sipTransactions.length,
           current_amount: currentAmount,
         };
@@ -300,12 +304,12 @@ export const updateInvestment = async (req: Request, res: Response, next: NextFu
     const authReq = req as any;
     const userId = authReq.user?.id;
     const { id } = req.params;
-    const { 
-      name, 
-      amount, 
-      units, 
-      purchase_price, 
-      purchase_date, 
+    const {
+      name,
+      amount,
+      units,
+      purchase_price,
+      purchase_date,
       description,
       investment_type_id,
       // SIP fields
@@ -316,6 +320,8 @@ export const updateInvestment = async (req: Request, res: Response, next: NextFu
       sip_end_date,
       sip_day_of_month,
       sip_total_installments,
+      // Emergency fund flag
+      is_emergency_fund,
     } = req.body;
 
     const investment = await db('investments')
@@ -362,6 +368,7 @@ export const updateInvestment = async (req: Request, res: Response, next: NextFu
         sip_end_date: sip_end_date || investment.sip_end_date,
         sip_day_of_month: sip_day_of_month || investment.sip_day_of_month,
         sip_total_installments: sip_total_installments || investment.sip_total_installments,
+        is_emergency_fund: is_emergency_fund !== undefined ? is_emergency_fund : investment.is_emergency_fund,
         updated_at: db.fn.now(),
       })
       .returning('*');
@@ -454,7 +461,7 @@ export const processSipPayment = async (req: Request, res: Response, next: NextF
     const updatedInvestment = await getInvestmentWithDetails(id);
     const sipTransactions = await getSipTransactions(id);
 
-    res.json({ 
+    res.json({
       message: 'SIP payment processed successfully',
       investment: { ...updatedInvestment, sip_transactions: sipTransactions }
     });
@@ -468,11 +475,11 @@ export const withdrawInvestment = async (req: Request, res: Response, next: Next
     const authReq = req as any;
     const userId = authReq.user?.id;
     const { id } = req.params;
-    const { 
-      target_account_id, 
-      withdrawal_amount, 
-      withdrawal_date, 
-      description 
+    const {
+      target_account_id,
+      withdrawal_amount,
+      withdrawal_date,
+      description
     } = req.body;
 
     const investment = await db('investments')
@@ -576,7 +583,7 @@ export const withdrawInvestment = async (req: Request, res: Response, next: Next
     const updatedInvestment = await getInvestmentWithDetails(id);
     const currentAmount = Number(updatedInvestment.amount) - Number(updatedInvestment.withdrawal_amount || 0);
 
-    res.json({ 
+    res.json({
       message: isFullWithdrawal ? 'Investment withdrawn successfully' : 'Partial withdrawal processed successfully',
       income: {
         ...income,
