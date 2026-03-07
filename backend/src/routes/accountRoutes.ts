@@ -51,4 +51,16 @@ router.delete('/:id', accountController.deleteAccount);
 
 router.post('/:id/reactivate', accountController.reactivateAccount);
 
+router.post(
+  '/transfer',
+  [
+    body('from_account_id').isUUID(),
+    body('to_account_id').isUUID(),
+    body('amount').isFloat({ min: 0.01 }),
+    body('description').optional().trim().isLength({ max: 500 }),
+    body('transfer_date').optional().isISO8601(),
+  ],
+  accountController.transfer
+);
+
 export default router;

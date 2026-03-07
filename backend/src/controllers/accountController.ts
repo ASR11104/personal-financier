@@ -454,3 +454,141 @@ export const getAccountBalance = async (req: Request, res: Response, next: NextF
     handleError(next, error);
   }
 };
+
+interface TransferInput {
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
+  description?: string;
+  transfer_date?: string;
+}
+
+export const transfer = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.user?.id;
+    const { from_account_id, to_account_id, amount, description, transfer_date } = req.body as TransferInput;
+
+    // Validate amount
+    if (!amount || amount <= 0) {
+      throw new AppError('Transfer amount must be greater than 0', 400);
+    }
+
+    // Validate accounts are different
+    if (from_account_id === to_account_id) {
+      throw new AppError('Source and destination accounts must be different', 400);
+    }
+
+    // Get source account
+    const fromAccount = await db('accounts')
+      .where('id', from_account_id)
+      .where('user_id', userId)
+      .where('is_active', true)
+      .first();
+
+    if (!fromAccount) {
+      throw new AppError('Source account not found', 404);
+    }
+
+    // For credit cards, check available credit
+    if (fromAccount.type === 'credit_card') {
+      const accountDetails = await db('account_details')
+        .where('account_id', from_account_id)
+        .first();
+      
+      if (!accountDetails || accountDetails.available_credit < amount) {
+        throw new AppError('Insufficient credit available', 400);
+      }
+    } else if (fromAccount.balance < amount) {
+      throw new AppError('Insufficient balance', 400);
+    }
+
+    // Get destination account
+    const toAccount = await db('accounts')
+      .where('id', to_account_id)
+      .where('user_id', userId)
+      .where('is_active', true)
+      .first();
+
+    if (!toAccount) {
+      throw new AppError('Destination account not found', 404);
+    }
+
+    // Perform the transfer in a transaction
+    const transferDate = transfer_date || new Date().toISOString().split('T')[0];
+
+    await db.transaction(async (trx) => {
+      // Deduct from source account
+      if (fromAccount.type === 'credit_card') {
+        // For credit cards, reduce available credit
+        await trx('account_details')
+          .where('account_id', from_account_id)
+          .decrement('available_credit', amount);
+      } else {
+        // For other accounts, reduce balance
+        await trx('accounts')
+          .where('id', from_account_id)
+          .decrement('balance', amount);
+      }
+
+      // Add to destination account
+      if (toAccount.type === 'credit_card') {
+        // For credit cards, increase available credit (pay off debt)
+        await trx('account_details')
+          .where('account_id', to_account_id)
+          .increment('available_credit', amount);
+      } else {
+        // For other accounts, increase balance
+        await trx('accounts')
+          .where('id', to_account_id)
+          .increment('balance', amount);
+      }
+
+      // Create ledger entry for source (negative amount)
+      await trx('ledger_entries').insert({
+        account_id: from_account_id,
+        amount: -amount,
+      });
+
+      // Create ledger entry for destination (positive amount)
+      await trx('ledger_entries').insert({
+        account_id: to_account_id,
+        amount: amount,
+      });
+    });
+
+    // Get updated accounts
+    const updatedFromAccount = await db('accounts')
+      .where('id', from_account_id)
+      .first();
+
+    const updatedToAccount = await db('accounts')
+      .where('id', to_account_id)
+      .first();
+
+    res.status(201).json({
+      message: 'Transfer completed successfully',
+      transfer: {
+        from_account_id,
+        to_account_id,
+        amount,
+        description,
+        transfer_date: transferDate,
+      },
+      from_account: {
+        id: updatedFromAccount.id,
+        name: updatedFromAccount.name,
+        type: updatedFromAccount.type,
+        balance: updatedFromAccount.balance,
+      },
+      to_account: {
+        id: updatedToAccount.id,
+        name: updatedToAccount.name,
+        type: updatedToAccount.type,
+        balance: updatedToAccount.balance,
+      },
+    });
+  } catch (error) {
+    handleError(next, error);
+  }
+};

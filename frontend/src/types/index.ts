@@ -63,6 +63,31 @@ export interface Account {
   details?: AccountDetails;
 }
 
+export interface Transfer {
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
+  description?: string;
+  transfer_date?: string;
+}
+
+export interface TransferResponse {
+  message: string;
+  transfer: Transfer;
+  from_account: {
+    id: string;
+    name: string;
+    type: string;
+    balance: number;
+  };
+  to_account: {
+    id: string;
+    name: string;
+    type: string;
+    balance: number;
+  };
+}
+
 export interface Category {
   id: string;
   user_id?: string;

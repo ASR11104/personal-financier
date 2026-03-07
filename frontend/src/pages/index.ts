@@ -13,6 +13,7 @@ export { EditInvestment } from './EditInvestment';
 export { Accounts } from './Accounts';
 export { AddAccount } from './AddAccount';
 export { EditAccount } from './EditAccount';
+export { Transfer } from './Transfer';
 export { Analytics } from './Analytics';
 export { Categories } from './Categories';
 export { Profile } from './Profile';

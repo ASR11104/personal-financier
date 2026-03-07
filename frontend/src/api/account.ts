@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Account, AccountBalance } from '../types';
+import type { Account, AccountBalance, TransferResponse } from '../types';
 
 export interface AccountDetailsParams {
   credit_limit?: number;
@@ -29,6 +29,14 @@ export interface UpdateAccountParams {
   is_active?: boolean;
   balance?: number;
   details?: AccountDetailsParams;
+}
+
+export interface TransferParams {
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
+  description?: string;
+  transfer_date?: string;
 }
 
 export interface AccountListResponse {
@@ -76,6 +84,11 @@ export const accountApi = {
 
   reactivateAccount: async (id: string): Promise<{ account: Account; message: string }> => {
     const response = await api.post<{ account: Account; message: string }>(`/accounts/${id}/reactivate`);
+    return response.data;
+  },
+
+  transfer: async (params: TransferParams): Promise<TransferResponse> => {
+    const response = await api.post<TransferResponse>('/accounts/transfer', params);
     return response.data;
   },
 };
